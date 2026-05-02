@@ -1,0 +1,498 @@
+﻿<Window x:Class="ElApostol_WPF.UI.Dueño.GestionEmpleadosWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="El Apóstol — Gestión de Empleados"
+        Height="680" Width="780"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanMinimize"
+        KeyDown="Window_KeyDown"
+        Background="#F5F5F5">
+
+    <Window.Resources>
+        <!-- Estilo botón sidebar (igual al MenuDuenoWindow) -->
+        <Style x:Key="SbBtn" TargetType="Button">
+            <Setter Property="Background"   Value="Transparent"/>
+            <Setter Property="Foreground"   Value="#D9FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize"     Value="12"/>
+            <Setter Property="FontWeight"   Value="Medium"/>
+            <Setter Property="Cursor"       Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding"      Value="10,9"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#1AFFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SbBtnActive" TargetType="Button" BasedOn="{StaticResource SbBtn}">
+            <Setter Property="Background" Value="#2DFFFFFF"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ═══ SIDEBAR ═══ -->
+        <Border Grid.Column="0" Background="#1B5E20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Padding="16,20,16,16"
+                        BorderBrush="#1FFFFFFF" BorderThickness="0,0,0,0.5">
+                    <StackPanel>
+                        <Border Width="40" Height="40" CornerRadius="20"
+                                Background="#26FFFFFF" HorizontalAlignment="Left" Margin="0,0,0,8">
+                            <TextBlock x:Name="TxtAvatar" Text="JR"
+                                       FontSize="14" FontWeight="Medium" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock x:Name="TxtNombreUsuario" Text="Juan Rodríguez"
+                                   FontSize="13" FontWeight="Medium" Foreground="White"/>
+                        <TextBlock Text="Administrador · Dueño"
+                                   FontSize="11" Foreground="#99FFFFFF" Margin="0,1,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden">
+                    <StackPanel Margin="8,12,8,0">
+
+                        <TextBlock Text="GESTIÓN" FontSize="10" Foreground="#66FFFFFF" Margin="8,0,0,4"/>
+
+                        <Button Style="{StaticResource SbBtn}" Click="BtnInventario_Click">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Path Width="16" Height="16" Margin="0,0,8,0" Fill="#CCFFFFff"
+                                          Data="M1,1 H7 V7 H1 Z M9,1 H15 V7 H9 Z M1,9 H7 V15 H1 Z M9,9 H15 V15 H9 Z"/>
+                                    <TextBlock Text="Inventario" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
+                                    <TextBlock Text="F1" FontSize="10" Foreground="#80FFFFFF"/>
+                                </Border>
+                            </Grid>
+                        </Button>
+
+                        <Button Style="{StaticResource SbBtn}" Click="BtnAgregarMaterial_Click" Margin="0,2,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="+" FontSize="15" Foreground="#CCFFFFff" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Agregar material" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
+                                    <TextBlock Text="F2" FontSize="10" Foreground="#80FFFFFF"/>
+                                </Border>
+                            </Grid>
+                        </Button>
+
+                        <Button Style="{StaticResource SbBtn}" Click="BtnNuevaVenta_Click" Margin="0,2,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="≡" FontSize="15" Foreground="#CCFFFFff" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Nueva venta" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
+                                    <TextBlock Text="F3" FontSize="10" Foreground="#80FFFFFF"/>
+                                </Border>
+                            </Grid>
+                        </Button>
+
+                        <TextBlock Text="REPORTES" FontSize="10" Foreground="#66FFFFFF" Margin="8,12,0,4"/>
+
+                        <Button Style="{StaticResource SbBtn}" Click="BtnReporteVentas_Click">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="📋" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Reporte de ventas" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
+                                    <TextBlock Text="F4" FontSize="10" Foreground="#80FFFFFF"/>
+                                </Border>
+                            </Grid>
+                        </Button>
+
+                        <TextBlock Text="CONFIGURACIÓN" FontSize="10" Foreground="#66FFFFFF" Margin="8,12,0,4"/>
+
+                        <!-- ACTIVO -->
+                        <Button Style="{StaticResource SbBtnActive}" Click="BtnGestionEmpleados_Click">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="👤" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Gestionar empleados" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
+                                    <TextBlock Text="F5" FontSize="10" Foreground="#80FFFFFF"/>
+                                </Border>
+                            </Grid>
+                        </Button>
+
+                        <Button Style="{StaticResource SbBtn}" Click="BtnCambiarClaveEmpleado_Click" Margin="0,2,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="🔒" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Cambiar clave empleado" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="110"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
+                                    <TextBlock Text="F6" FontSize="10" Foreground="#80FFFFFF"/>
+                                </Border>
+                            </Grid>
+                        </Button>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border Grid.Row="2" Padding="8,12" BorderBrush="#1FFFFFFF" BorderThickness="0,0.5,0,0">
+                    <Button Click="BtnCerrarSesion_Click" Cursor="Hand" BorderThickness="0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bg" Background="#33DC3545" CornerRadius="6" Padding="10,9">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="⇥" FontSize="14" Foreground="#FFB3B3" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Cerrar sesión · F12" FontSize="12" FontWeight="Medium" Foreground="#FFB3B3" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bg" Property="Background" Value="#55DC3545"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ═══ CONTENIDO PRINCIPAL ═══ -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Top bar -->
+            <Grid Grid.Row="0" Margin="20,16,20,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Gestión de empleados" FontSize="16" FontWeight="Medium" Foreground="#1A1A1A"/>
+                    <TextBlock Text="Administrá el acceso y los datos de tu equipo" FontSize="12" Foreground="#666666" Margin="0,1,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="+ Nuevo empleado"
+                        Height="34" Padding="14,0"
+                        FontSize="12" FontWeight="Medium"
+                        Foreground="White" BorderThickness="0"
+                        Cursor="Hand" Click="BtnNuevoEmpleado_Click">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bg" Background="#2E7D32" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bg" Property="Background" Value="#1B5E20"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+
+            <!-- Lista + panel lateral -->
+            <Grid Grid.Row="1" Margin="0,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Lista empleados -->
+                <Grid Grid.Column="0" Margin="20,0,10,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Buscador + filtro -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="130"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TxtBusqueda" Grid.Column="0"
+                                 Height="34" FontSize="12" Padding="12,0"
+                                 VerticalContentAlignment="Center"
+                                 Background="White" BorderBrush="Black" BorderThickness="0.5"
+                                 Margin="0,0,8,0"
+                                 TextChanged="TxtBusqueda_TextChanged"/>
+                        <ComboBox x:Name="CmbFiltroEstado" Grid.Column="1"
+                                  Height="34" FontSize="12" Padding="10,0"
+                                  Background="White" BorderBrush="Black" BorderThickness="0.5"
+                                  VerticalContentAlignment="Center"
+                                  SelectionChanged="CmbFiltroEstado_SelectionChanged">
+                            <ComboBoxItem Content="Todos" IsSelected="True"/>
+                            <ComboBoxItem Content="Activos"/>
+                            <ComboBoxItem Content="Inactivos"/>
+                        </ComboBox>
+                    </Grid>
+
+                    <!-- Lista -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="PanelEmpleados"/>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Panel detalle (derecha) -->
+                <Border x:Name="PanelDetalle" Grid.Column="1"
+                        Width="270"
+                        Background="White"
+                        BorderBrush="#EEEEEE" BorderThickness="0.5,0,0,0"
+                        Visibility="Collapsed">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header panel -->
+                        <Grid Grid.Row="0" Margin="14,12,10,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="TxtPanelTitulo" Text="Detalle del empleado"
+                                       FontSize="13" FontWeight="Medium" Foreground="#1A1A1A"
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="✕"
+                                    FontSize="13" Foreground="#AAAAAA"
+                                    Background="Transparent" BorderThickness="0"
+                                    Cursor="Hand" Padding="4,2"
+                                    Click="BtnCerrarPanel_Click"/>
+                        </Grid>
+
+                        <Border Grid.Row="0" BorderBrush="#EEEEEE" BorderThickness="0,0,0,0.5" Margin="0,40,0,0"/>
+
+                        <!-- Cuerpo panel: detalle existente -->
+                        <ScrollViewer x:Name="ScrollDetalle" Grid.Row="1"
+                                      VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="PanelDetalleBody" Margin="16,14,16,0">
+
+                                <!-- Avatar + nombre -->
+                                <Border Width="52" Height="52" CornerRadius="26"
+                                        Background="#EAF3DE" HorizontalAlignment="Center"
+                                        Margin="0,0,0,6">
+                                    <TextBlock x:Name="TxtPanelAvatar" Text="MG"
+                                               FontSize="18" FontWeight="Medium"
+                                               Foreground="#27500A"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock x:Name="TxtPanelNombre" Text="María González"
+                                           FontSize="14" FontWeight="Medium"
+                                           Foreground="#1A1A1A"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TxtPanelRol" Text="Vendedora · Activa"
+                                           FontSize="11" Foreground="#666666"
+                                           HorizontalAlignment="Center" Margin="0,2,0,12"/>
+
+                                <!-- Separador sección -->
+                                <TextBlock Text="INFORMACIÓN" FontSize="10" FontWeight="Medium"
+                                           Foreground="#666666" Margin="0,0,0,8"/>
+                                <Border BorderBrush="#EEEEEE" BorderThickness="0,0,0,0.5" Margin="0,0,0,8"/>
+
+                                <!-- Filas info -->
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Usuario" FontSize="12" Foreground="#666666"/>
+                                    <TextBlock x:Name="TxtPanelUsuario" Grid.Column="1"
+                                               FontSize="12" FontWeight="Medium" Foreground="#1A1A1A"/>
+                                </Grid>
+                                <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,0.5" Margin="0,0,0,6"/>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Alta en sistema" FontSize="12" Foreground="#666666"/>
+                                    <TextBlock x:Name="TxtPanelFechaAlta" Grid.Column="1"
+                                               FontSize="12" FontWeight="Medium" Foreground="#1A1A1A"/>
+                                </Grid>
+                                <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,0.5" Margin="0,0,0,6"/>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Ventas hoy" FontSize="12" Foreground="#666666"/>
+                                    <TextBlock x:Name="TxtPanelVentasHoy" Grid.Column="1"
+                                               FontSize="12" FontWeight="Medium" Foreground="#1A1A1A"/>
+                                </Grid>
+                                <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,0.5" Margin="0,0,0,6"/>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Total recaudado hoy" FontSize="12" Foreground="#666666"/>
+                                    <TextBlock x:Name="TxtPanelTotalHoy" Grid.Column="1"
+                                               FontSize="12" FontWeight="Medium" Foreground="#1B5E20"/>
+                                </Grid>
+
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Cuerpo panel: nuevo empleado -->
+                        <ScrollViewer x:Name="ScrollNuevo" Grid.Row="1"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Visibility="Collapsed">
+                            <StackPanel Margin="16,14,16,0">
+
+                                <TextBlock Text="Nombre completo" FontSize="11" FontWeight="Medium"
+                                           Foreground="#666666" Margin="0,0,0,4"/>
+                                <TextBox x:Name="TxtNuevoNombre"
+                                         Height="34" FontSize="13" Padding="10,0"
+                                         VerticalContentAlignment="Center"
+                                         Background="#F5F5F5" BorderBrush="#DDDDDD" BorderThickness="1"
+                                         Margin="0,0,0,12"/>
+
+                                <TextBlock Text="Nombre de usuario" FontSize="11" FontWeight="Medium"
+                                           Foreground="#666666" Margin="0,0,0,4"/>
+                                <TextBox x:Name="TxtNuevoUsuario"
+                                         Height="34" FontSize="13" Padding="10,0"
+                                         VerticalContentAlignment="Center"
+                                         Background="#F5F5F5" BorderBrush="#DDDDDD" BorderThickness="1"
+                                         Margin="0,0,0,12"/>
+
+                                <TextBlock Text="Contraseña temporal" FontSize="11" FontWeight="Medium"
+                                           Foreground="#666666" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtNuevoPass" Grid.Column="0"
+                                             Height="34" FontSize="12" Padding="10,0"
+                                             VerticalContentAlignment="Center"
+                                             Background="#F5F5F5" BorderBrush="#DDDDDD" BorderThickness="1"
+                                             IsReadOnly="True" Margin="0,0,6,0"
+                                             FontFamily="Consolas"/>
+                                    <Button Grid.Column="1" Content="Generar"
+                                            Height="34" Padding="10,0"
+                                            FontSize="11" FontWeight="Medium"
+                                            Cursor="Hand" Click="BtnGenerarPass_Click"
+                                            BorderThickness="0.5" BorderBrush="#2E7D32"
+                                            Foreground="#27500A" Background="#EAF3DE"/>
+                                </Grid>
+
+                                <Border Background="#EAF3DE" CornerRadius="6" Padding="10,10">
+                                    <TextBlock Text="El empleado deberá cambiar esta contraseña al ingresar por primera vez."
+                                               FontSize="12" Foreground="#27500A" TextWrapping="Wrap"/>
+                                </Border>
+
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Acciones panel -->
+                        <StackPanel x:Name="AccionesDetalle" Grid.Row="2"
+                                    Margin="14,10,14,14">
+                            <Border BorderBrush="#EEEEEE" BorderThickness="0,0.5,0,0" Margin="0,0,0,10"/>
+                            <Button x:Name="BtnResetearContrasena"
+                                    Content="Resetear contraseña"
+                                    Height="34" FontSize="12" FontWeight="Medium"
+                                    Cursor="Hand"
+                                    Foreground="#27500A" Background="#EAF3DE"
+                                    BorderBrush="#2E7D32" BorderThickness="0.5"
+                                    Margin="0,0,0,8"
+                                    Click="BtnResetearContrasena_Click"/>
+                            <Button x:Name="BtnToggleActivo"
+                                    Content="Desactivar empleado"
+                                    Height="34" FontSize="12"
+                                    Cursor="Hand"
+                                    Foreground="#666666" Background="Transparent"
+                                    BorderBrush="#DDDDDD" BorderThickness="0.5"
+                                    Click="BtnToggleActivo_Click"/>
+                        </StackPanel>
+
+                        <StackPanel x:Name="AccionesNuevo" Grid.Row="2"
+                                    Margin="14,10,14,14"
+                                    Visibility="Collapsed">
+                            <Border BorderBrush="#EEEEEE" BorderThickness="0,0.5,0,0" Margin="0,0,0,10"/>
+                            <Button Content="Crear empleado"
+                                    Height="36" FontSize="13" FontWeight="Medium"
+                                    Cursor="Hand"
+                                    Foreground="White" Background="#2E7D32"
+                                    BorderThickness="0"
+                                    Margin="0,0,0,8"
+                                    Click="BtnCrearEmpleado_Click"/>
+                            <Button Content="Cancelar"
+                                    Height="34" FontSize="12"
+                                    Cursor="Hand"
+                                    Foreground="#666666" Background="Transparent"
+                                    BorderBrush="#DDDDDD" BorderThickness="0.5"
+                                    Click="BtnCancelarNuevo_Click"/>
+                        </StackPanel>
+
+                    </Grid>
+                </Border>
+
+            </Grid>
+        </Grid>
+
+    </Grid>
+</Window>

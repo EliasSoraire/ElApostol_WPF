@@ -1,0 +1,267 @@
+﻿<Window x:Class="ElApostol_WPF.UI.Login.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="El Apóstol" Height="520" Width="720"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="#F5F5F5">
+
+    <Window.Resources>
+        <!-- Colores base -->
+        <SolidColorBrush x:Key="Verde" Color="#2E7D32"/>
+        <SolidColorBrush x:Key="VerdeDark" Color="#1B5E20"/>
+        <SolidColorBrush x:Key="VerdeLight" Color="#EAF3DE"/>
+        <SolidColorBrush x:Key="VerdeLightText" Color="#27500A"/>
+        <SolidColorBrush x:Key="BgSecondary" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="BorderColor" Color="#DDDDDD"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#666666"/>
+        <SolidColorBrush x:Key="TextTertiary" Color="#AAAAAA"/>
+        <SolidColorBrush x:Key="DangerColor" Color="#D32F2F"/>
+
+        <!-- Estilo botón de rol -->
+        <Style x:Key="RoleBtnStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="Padding" Value="8,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Border CornerRadius="10" BorderBrush="#CCCCCC" BorderThickness="0.5" ClipToBounds="True">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ===== PANEL IZQUIERDO ===== -->
+            <Border Grid.Column="0" Background="#2E7D32">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Width="260">
+
+                    <!-- Logo círculo -->
+                    <Border Width="100" Height="100" CornerRadius="50"
+                            Background="#26FFFFFF"
+                            BorderBrush="#4DFFFFFF" BorderThickness="2"
+                            HorizontalAlignment="Center">
+                        <Border Width="70" Height="70" CornerRadius="35"
+                                Background="#E5FFFFFF"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="A" FontSize="28" FontWeight="Medium"
+                                       Foreground="#2E7D32"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </Border>
+
+                    <!-- Nombre -->
+                    <TextBlock Text="El Apóstol" FontSize="26" FontWeight="Medium"
+                               Foreground="White" TextAlignment="Center"
+                               Margin="0,16,0,0"/>
+
+                    <!-- Divider -->
+                    <Border Width="40" Height="2" Background="#59FFFFFF"
+                            CornerRadius="2" Margin="0,12,0,12"
+                            HorizontalAlignment="Center"/>
+
+                    <!-- Subtítulo -->
+                    <TextBlock Text="Sistema de gestión integral&#xa;para materiales de construcción"
+                               FontSize="13" Foreground="#BFFFFFFF"
+                               TextAlignment="Center" LineHeight="20"/>
+
+                    <!-- Badge -->
+                    <Border Background="#1FFFFFFF"
+                            BorderBrush="#40FFFFFF" BorderThickness="0.5"
+                            CornerRadius="20" Padding="14,4"
+                            HorizontalAlignment="Center" Margin="0,16,0,0">
+                        <TextBlock Text="v2.0 · Construcción"
+                                   FontSize="12" Foreground="#CCFFFFFF"/>
+                    </Border>
+
+                </StackPanel>
+            </Border>
+
+            <!-- ===== PANEL DERECHO ===== -->
+            <Border Grid.Column="1" Background="White" Padding="40">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+
+                        <!-- Header -->
+                        <TextBlock Text="Acceso al sistema" FontSize="20"
+                                   FontWeight="Medium" Foreground="#1A1A1A"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock Text="Seleccioná tu perfil e ingresá tus credenciales"
+                                   FontSize="13" Foreground="#666666"
+                                   Margin="0,0,0,24"/>
+
+                        <!-- Selector de rol -->
+                        <Grid Margin="0,0,0,24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Botón Dueño -->
+                            <Border x:Name="BtnRolDueno" Grid.Column="0"
+                                    Style="{StaticResource RoleBtnStyle}"
+                                    Background="#EAF3DE"
+                                    BorderBrush="#2E7D32"
+                                    MouseLeftButtonUp="BtnRolDueno_Click">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <Border Width="28" Height="28" CornerRadius="14"
+                                            Background="#2E7D32"
+                                            HorizontalAlignment="Center">
+                                        <TextBlock Text="D" FontSize="13" FontWeight="Medium"
+                                                   Foreground="White"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock x:Name="TxtRolDueno" Text="Dueño"
+                                               FontSize="13" FontWeight="Medium"
+                                               Foreground="#27500A"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Botón Empleado -->
+                            <Border x:Name="BtnRolEmpleado" Grid.Column="2"
+                                    Style="{StaticResource RoleBtnStyle}"
+                                    Background="#F5F5F5"
+                                    BorderBrush="#DDDDDD"
+                                    MouseLeftButtonUp="BtnRolEmpleado_Click">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <Border x:Name="IconEmpleado"
+                                            Width="28" Height="28" CornerRadius="14"
+                                            Background="#2E7D32"
+                                            HorizontalAlignment="Center">
+                                        <TextBlock Text="E" FontSize="13" FontWeight="Medium"
+                                                   Foreground="White"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock x:Name="TxtRolEmpleado" Text="Empleado"
+                                               FontSize="13" FontWeight="Medium"
+                                               Foreground="#666666"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Campo Usuario -->
+                        <TextBlock Text="USUARIO" FontSize="12" FontWeight="Medium"
+                                   Foreground="#666666" Margin="0,0,0,6"/>
+                        <TextBox x:Name="TxtUsuario"
+                                 Height="40" FontSize="14"
+                                 Padding="14,0"
+                                 VerticalContentAlignment="Center"
+                                 Background="#F5F5F5"
+                                 BorderBrush="#CCCCCC" BorderThickness="1"
+                                 Foreground="#1A1A1A"
+                                 Margin="0,0,0,16"/>
+
+                        <!-- Campo Contraseña -->
+                        <TextBlock Text="CONTRASEÑA" FontSize="12" FontWeight="Medium"
+                                   Foreground="#666666" Margin="0,0,0,6"/>
+                        <Grid Margin="0,0,0,8">
+                            <PasswordBox x:Name="PbContrasena"
+                                         Height="40" FontSize="14"
+                                         Padding="14,0"
+                                         VerticalContentAlignment="Center"
+                                         Background="#F5F5F5"
+                                         BorderBrush="#CCCCCC" BorderThickness="1"
+                                         Foreground="#1A1A1A"/>
+                            <TextBox x:Name="TxtContrasenaVisible"
+                                     Height="40" FontSize="14"
+                                     Padding="14,0"
+                                     VerticalContentAlignment="Center"
+                                     Background="#F5F5F5"
+                                     BorderBrush="#CCCCCC" BorderThickness="1"
+                                     Foreground="#1A1A1A"
+                                     Visibility="Collapsed"/>
+                            <Button x:Name="BtnOjo"
+                                    Width="32" Height="32"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,4,0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Content="●"
+                                    FontSize="12"
+                                    Foreground="#AAAAAA"
+                                    Cursor="Hand"
+                                    Click="BtnOjo_Click"/>
+                        </Grid>
+
+                        <!-- Botón ingresar -->
+                        <Button x:Name="BtnIngresar"
+                                Height="44" Margin="0,8,0,0"
+                                Background="#2E7D32" Foreground="White"
+                                FontSize="14" FontWeight="Medium"
+                                BorderThickness="0"
+                                Content="Ingresar al sistema"
+                                Cursor="Hand"
+                                Click="BtnIngresar_Click">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="border"
+                                                        Background="{TemplateBinding Background}"
+                                                        CornerRadius="8">
+                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="border" Property="Background" Value="#1B5E20"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Error -->
+                        <TextBlock x:Name="TxtError"
+                                   FontSize="12" Foreground="#D32F2F"
+                                   TextAlignment="Center"
+                                   Margin="0,8,0,0"
+                                   Visibility="Collapsed"/>
+
+                        <!-- Olvidé contraseña -->
+                        <TextBlock HorizontalAlignment="Center" Margin="0,12,0,0">
+                            <Hyperlink x:Name="LinkOlvide"
+                                       Foreground="#666666"
+                                       TextDecorations="Underline"
+                                       Click="LinkOlvide_Click">
+                                ¿Olvidaste tu contraseña?
+                            </Hyperlink>
+                        </TextBlock>
+
+                    </StackPanel>
+
+                    <!-- Versión abajo a la derecha -->
+                    <TextBlock Grid.Row="1"
+                               Text="v2.0 · Sistema de Construcción"
+                               FontSize="11" Foreground="#AAAAAA"
+                               HorizontalAlignment="Right"
+                               Margin="0,16,0,0"/>
+                </Grid>
+            </Border>
+
+        </Grid>
+    </Border>
+</Window>
