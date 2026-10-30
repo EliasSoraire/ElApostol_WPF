@@ -406,17 +406,36 @@
                     Margin="18,0,18,8"
                     Background="#FAEEDA" CornerRadius="8"
                     BorderBrush="#EF9F27" BorderThickness="0.5"
-                    Padding="12,8" Visibility="Collapsed">
-                <StackPanel Orientation="Horizontal">
-                    <Path Data="M8 2L14 13H2L8 2z M8 7v3 M8 11.5"
-                          Stroke="#854F0B" StrokeThickness="1.5"
-                          StrokeLineJoin="Round" StrokeStartLineCap="Round"
-                          Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0"
-                          VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TxtAlerta"
-                               FontSize="12" Foreground="#633806"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
+                    Padding="12,6" Visibility="Collapsed">
+                <Grid>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M8 2L14 13H2L8 2z M8 7v3 M8 11.5"
+                              Stroke="#854F0B" StrokeThickness="1.5"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round"
+                              Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0"
+                              VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtAlerta"
+                                   FontSize="12" FontWeight="Medium" Foreground="#633806"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button HorizontalAlignment="Right" Content="Ver lista"
+                            Click="BtnVerCriticos_Click" Cursor="Hand"
+                            FontSize="12" FontWeight="Medium">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="b" Background="#854F0B" CornerRadius="5" Padding="12,3">
+                                    <ContentPresenter TextElement.Foreground="White"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="b" Property="Background" Value="#633806"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
             </Border>
 
             <!-- Área inventario -->

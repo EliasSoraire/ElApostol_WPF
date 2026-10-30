@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using ElApostol_WPF.UI.Shared;
 using System.Windows;
 using System.Windows.Controls;
 using ElApostol_WPF.Data;
@@ -50,10 +51,18 @@ namespace ElApostol_WPF.UI.Dueño
 
         private void CargarDatosProducto(Producto p)
         {
-            TxtCodigo.Text = p.CodigoInterno;
             TxtNombre.Text = p.Nombre;
             TxtMarca.Text = p.Marca ?? string.Empty;
             TxtProveedor.Text = p.Proveedor ?? string.Empty;
+
+            // El número del código: lo que sigue a "PRE-" (si el código tiene otro formato, queda vacío)
+            var guion = p.CodigoInterno.LastIndexOf('-');
+            var resto = guion >= 0 ? p.CodigoInterno[(guion + 1)..] : "";
+            _numeroOriginal = resto.Length > 0 && resto.All(char.IsDigit) ? resto : "";
+
+            _cargandoCodigo = true;
+            TxtCodigoNumero.Text = _numeroOriginal;
+            _cargandoCodigo = false;
 
             if (p.CategoriaId > 0)
             {
@@ -70,39 +79,137 @@ namespace ElApostol_WPF.UI.Dueño
 
         private void Campo_Changed(object sender, EventArgs e) => ActualizarPreview();
 
-        private string? _codigoSugerido;
+        // ── Código: prefijo (de la categoría) + número ──
+
+        private string _numeroOriginal = "";
+        private string? _numeroSugerido;
+        private bool _cargandoCodigo;
+
+        private string PrefijoActual => (CmbCategoria.SelectedItem as Categoria)?.Prefijo ?? "";
+
+        /// <summary>Código completo armado con el prefijo y el número (ej. CON-015), o "" si falta algo.</summary>
+        private string CodigoActual
+        {
+            get
+            {
+                var numero = TxtCodigoNumero.Text.Trim();
+                if (PrefijoActual.Length == 0 || numero.Length == 0) return "";
+
+                // En edición, si no se tocó nada, se respeta el código original tal cual
+                if (_modoEdicion && _productoOriginal != null
+                    && (CmbCategoria.SelectedItem as Categoria)?.Id == _productoOriginal.CategoriaId
+                    && numero == _numeroOriginal)
+                    return _productoOriginal.CodigoInterno;
+
+                return int.TryParse(numero, out var n) ? $"{PrefijoActual}-{n:D3}" : "";
+            }
+        }
 
         private void CmbCategoria_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // En alta, si el código está vacío o es el que sugerimos antes, proponemos el siguiente de la categoría
-            if (!_modoEdicion && CmbCategoria.SelectedItem is Categoria cat)
+            if (CmbCategoria.SelectedItem is Categoria cat)
             {
-                var actual = TxtCodigo.Text.Trim();
-                if (actual.Length == 0 || actual == _codigoSugerido)
+                TxtPrefijo.Text = $"{cat.Prefijo}-";
+                try
                 {
-                    try
+                    var siguiente = _repo.GenerarSiguienteCodigo(cat.Prefijo);
+                    var numeroSiguiente = siguiente[(cat.Prefijo.Length + 1)..];
+                    var actual = TxtCodigoNumero.Text.Trim();
+
+                    if (_modoEdicion && cat.Id == _productoOriginal?.CategoriaId)
                     {
-                        _codigoSugerido = _repo.GenerarSiguienteCodigo(ObtenerPrefijo(cat));
-                        TxtCodigo.Text = _codigoSugerido;
+                        // Volvió a su categoría original: recupera su número
+                        TxtCodigoNumero.Text = _numeroOriginal;
                     }
-                    catch { }
+                    else if (actual.Length == 0 || actual == _numeroSugerido || _modoEdicion)
+                    {
+                        // Alta (o cambio de categoría en edición): proponemos el próximo libre
+                        TxtCodigoNumero.Text = numeroSiguiente;
+                    }
+                    _numeroSugerido = numeroSiguiente;
                 }
+                catch { _numeroSugerido = null; }
+            }
+            else
+            {
+                TxtPrefijo.Text = "···-";
             }
 
+            ActualizarHintCodigo();
             ActualizarPreview();
         }
 
-        /// <summary>Prefijo de código según la categoría: primeras 3 letras sin acentos (Construcción → CON).</summary>
-        private static string ObtenerPrefijo(Categoria cat)
+        private void TxtCodigoNumero_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
         {
-            var sinAcentos = new string(cat.Nombre
-                .Normalize(System.Text.NormalizationForm.FormD)
-                .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)
-                            != System.Globalization.UnicodeCategory.NonSpacingMark)
-                .Where(char.IsLetter)
-                .ToArray());
+            e.Handled = !e.Text.All(char.IsDigit);
+        }
 
-            return sinAcentos[..Math.Min(3, sinAcentos.Length)].ToUpperInvariant();
+        private void TxtCodigoNumero_Pasting(object sender, DataObjectPastingEventArgs e)
+        {
+            var texto = e.DataObject.GetData(typeof(string)) as string ?? "";
+            if (!texto.All(char.IsDigit)) e.CancelCommand();
+        }
+
+        private void TxtCodigoNumero_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_cargandoCodigo) return;
+            ActualizarHintCodigo();
+            ActualizarPreview();
+        }
+
+        /// <summary>
+        /// Muestra debajo del número cuál fue el último código usado con ese prefijo
+        /// y avisa en el momento si el número elegido ya está ocupado.
+        /// </summary>
+        private void ActualizarHintCodigo()
+        {
+            if (TxtCodigoHint == null) return;
+            TxtErrorCodigo.Visibility = Visibility.Collapsed;
+
+            var prefijo = PrefijoActual;
+            if (prefijo.Length == 0)
+            {
+                TxtCodigoHint.Text = "Elegí una categoría para ver el último código usado.";
+                TxtCodigoHint.Foreground = System.Windows.Media.Brushes.Gray;
+                return;
+            }
+
+            string? ultimo = null;
+            try { ultimo = _repo.ObtenerUltimoCodigo(prefijo); } catch { }
+
+            TxtCodigoHint.Text = ultimo == null
+                ? $"Sin códigos {prefijo} todavía · Próximo: {prefijo}-{_numeroSugerido ?? "001"}"
+                : $"Último: {ultimo}  ·  Próximo libre: {prefijo}-{_numeroSugerido}";
+            TxtCodigoHint.Foreground = new System.Windows.Media.SolidColorBrush(
+                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#27500A"));
+
+            // Aviso inmediato si el número ya lo usa otro material
+            var codigo = CodigoActual;
+            if (codigo.Length == 0) return;
+            try
+            {
+                var existente = _repo.ObtenerPorCodigo(codigo);
+                if (existente != null && existente.Value.id != (_productoOriginal?.Id ?? 0))
+                {
+                    TxtErrorCodigo.Text = existente.Value.activo
+                        ? $"✕ {codigo} ya lo usa \"{existente.Value.nombre}\"."
+                        : $"✕ {codigo} ya lo usa \"{existente.Value.nombre}\" (desactivado).";
+                    TxtErrorCodigo.Visibility = Visibility.Visible;
+                }
+            }
+            catch { }
+        }
+
+        private void BtnGestionarCategorias_Click(object sender, RoutedEventArgs e)
+        {
+            var ventana = new GestionCategoriasWindow { Owner = this };
+            ventana.ShowDialog();
+            if (!ventana.HuboCambios) return;
+
+            var seleccionId = (CmbCategoria.SelectedItem as Categoria)?.Id;
+            var categorias = _repo.ObtenerCategorias();
+            CmbCategoria.ItemsSource = categorias;
+            CmbCategoria.SelectedItem = categorias.FirstOrDefault(c => c.Id == seleccionId);
         }
 
         /// <summary>
@@ -128,9 +235,9 @@ namespace ElApostol_WPF.UI.Dueño
 
         private void ActualizarPreview()
         {
-            PrevCodigo.Text = string.IsNullOrWhiteSpace(TxtCodigo.Text)
-                ? "— sin código —" : TxtCodigo.Text.Trim();
-            PrevCodigo.Foreground = string.IsNullOrWhiteSpace(TxtCodigo.Text)
+            var codigoPrev = CodigoActual;
+            PrevCodigo.Text = codigoPrev.Length == 0 ? "— sin código —" : codigoPrev;
+            PrevCodigo.Foreground = codigoPrev.Length == 0
                 ? System.Windows.Media.Brushes.LightGray
                 : System.Windows.Media.Brushes.Gray;
 
@@ -238,25 +345,36 @@ namespace ElApostol_WPF.UI.Dueño
             var precioTxt = TxtVarPrecio.Text.Trim();
             var stockTxt = TxtVarStock.Text.Trim();
 
+            LimpiarErrorVariante();
+
             if (string.IsNullOrEmpty(medida))
             {
-                MostrarError("La medida es obligatoria para la variante.");
-                TxtVarMedida.Focus();
+                MostrarErrorVariante(TxtVarMedida, "Ingresá la medida de la variante (ej: 50 kg, 1/2\", 4 m).");
                 return;
             }
 
-            if (!TryParsePrecio(precioTxt, out var precio) || precio <= 0)
+            if (precioTxt.Length == 0)
             {
-                MostrarError("El precio de la variante debe ser un número positivo.\nEjemplos válidos: 1500 · 1.500 · 1.500,50");
-                TxtVarPrecio.Focus();
+                MostrarErrorVariante(TxtVarPrecio, "Ingresá el precio. Ejemplos: 1500 · 1.500 · 1.500,50");
+                return;
+            }
+
+            if (!TryParsePrecio(precioTxt, out var precio))
+            {
+                MostrarErrorVariante(TxtVarPrecio, $"\"{precioTxt}\" no es un precio válido. Ejemplos: 1500 · 1.500 · 1.500,50");
+                return;
+            }
+
+            if (precio <= 0)
+            {
+                MostrarErrorVariante(TxtVarPrecio, "El precio tiene que ser mayor a $0.");
                 return;
             }
 
             int stock = 0;
             if (stockTxt.Length > 0 && (!int.TryParse(stockTxt, out stock) || stock < 0))
             {
-                MostrarError("El stock debe ser un número entero mayor o igual a 0.");
-                TxtVarStock.Focus();
+                MostrarErrorVariante(TxtVarStock, "El stock tiene que ser un número entero, 0 o mayor.");
                 return;
             }
 
@@ -334,14 +452,14 @@ namespace ElApostol_WPF.UI.Dueño
 
                 if (variante.Id > 0 && _repo.VarianteTieneVentas(variante.Id))
                 {
-                    MessageBox.Show(
+                    Dialogo.Show(
                         $"La variante \"{variante.Medida}\" tiene ventas registradas y no se puede eliminar sin perder ese historial.\n\n" +
                         "Si ya no la vendés, podés dejar su stock en 0.",
                         "No se puede eliminar", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
-                var r = MessageBox.Show(
+                var r = Dialogo.Show(
                     $"¿Eliminás la variante \"{variante.Medida}\"?",
                     "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
@@ -373,26 +491,25 @@ namespace ElApostol_WPF.UI.Dueño
             TxtErrorCategoria.Visibility = Visibility.Collapsed;
             TxtErrorVariantes.Visibility = Visibility.Collapsed;
 
-            var codigo = TxtCodigo.Text.Trim().ToUpperInvariant();
-            var cambioCodigo = !_modoEdicion
-                || !string.Equals(codigo, _productoOriginal?.CodigoInterno, StringComparison.OrdinalIgnoreCase);
+            var numero = TxtCodigoNumero.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(codigo))
+            if (CmbCategoria.SelectedItem is not Categoria)
             {
-                TxtErrorCodigo.Text = "El código es obligatorio.";
+                TxtErrorCodigo.Text = "Elegí la categoría para armar el código.";
                 TxtErrorCodigo.Visibility = Visibility.Visible;
                 ok = false;
             }
-            else if (cambioCodigo && CmbCategoria.SelectedItem is Categoria catSel)
+            else if (numero.Length == 0)
             {
-                // Formato PRE-000, con el prefijo de la categoría (CON, ELE, PLO…)
-                var prefijo = ObtenerPrefijo(catSel);
-                if (!System.Text.RegularExpressions.Regex.IsMatch(codigo, $@"^{prefijo}-\d{{3,}}$"))
-                {
-                    TxtErrorCodigo.Text = $"El código debe tener el formato {prefijo}-000 (ej: {prefijo}-001).";
-                    TxtErrorCodigo.Visibility = Visibility.Visible;
-                    ok = false;
-                }
+                TxtErrorCodigo.Text = "Ingresá el número del código.";
+                TxtErrorCodigo.Visibility = Visibility.Visible;
+                ok = false;
+            }
+            else if (!int.TryParse(numero, out var n) || n <= 0)
+            {
+                TxtErrorCodigo.Text = "El número del código tiene que ser mayor a 0.";
+                TxtErrorCodigo.Visibility = Visibility.Visible;
+                ok = false;
             }
 
             if (string.IsNullOrWhiteSpace(TxtNombre.Text))
@@ -422,7 +539,7 @@ namespace ElApostol_WPF.UI.Dueño
         {
             if (_varianteEnEdicion != null)
             {
-                var r = MessageBox.Show(
+                var r = Dialogo.Show(
                     "Tenés una variante en edición sin confirmar.\n¿Querés descartarla y guardar igual?",
                     "Edición pendiente", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
@@ -434,7 +551,7 @@ namespace ElApostol_WPF.UI.Dueño
 
             if (!Validar()) return;
 
-            var codigo = TxtCodigo.Text.Trim().ToUpperInvariant();
+            var codigo = CodigoActual;
             if (!VerificarCodigoDisponible(codigo)) return;
 
             var producto = new Producto
@@ -470,7 +587,7 @@ namespace ElApostol_WPF.UI.Dueño
             }
             catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 547)
             {
-                MessageBox.Show(
+                Dialogo.Show(
                     "No se pudo guardar porque una de las variantes eliminadas tiene ventas registradas.\n" +
                     "Volvé a agregarla o dejá su stock en 0.",
                     "No se puede guardar", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -478,7 +595,7 @@ namespace ElApostol_WPF.UI.Dueño
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                Dialogo.Show(
                     $"Error al guardar:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 RestaurarBotonGuardar();
@@ -518,11 +635,11 @@ namespace ElApostol_WPF.UI.Dueño
                     ? $"El código {codigo} ya lo usa \"{nombre}\"."
                     : $"El código {codigo} ya lo usa \"{nombre}\" (desactivado).";
                 TxtErrorCodigo.Visibility = Visibility.Visible;
-                TxtCodigo.Focus();
+                TxtCodigoNumero.Focus();
                 return false;
             }
 
-            var res = MessageBox.Show(
+            var res = Dialogo.Show(
                 $"El código {codigo} pertenece a \"{nombre}\", que está desactivado.\n\n" +
                 "¿Querés reactivarlo? Vuelve con el stock y precios que tenía (los datos cargados en este formulario no se guardan).\n\n" +
                 "Elegí \"No\" para usar otro código.",
@@ -533,21 +650,21 @@ namespace ElApostol_WPF.UI.Dueño
                 try
                 {
                     _repo.ReactivarProducto(id);
-                    MessageBox.Show($"\"{nombre}\" fue reactivado. Podés editarlo desde el inventario.",
+                    Dialogo.Show($"\"{nombre}\" fue reactivado. Podés editarlo desde el inventario.",
                         "Producto reactivado", MessageBoxButton.OK, MessageBoxImage.Information);
                     DialogResult = true;
                     Close();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error al reactivar:\n{ex.Message}",
+                    Dialogo.Show($"Error al reactivar:\n{ex.Message}",
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             else
             {
-                TxtCodigo.Focus();
-                TxtCodigo.SelectAll();
+                TxtCodigoNumero.Focus();
+                TxtCodigoNumero.SelectAll();
             }
 
             return false;
@@ -565,8 +682,50 @@ namespace ElApostol_WPF.UI.Dueño
             Close();
         }
 
-        private static void MostrarError(string msg) =>
-            MessageBox.Show(msg, "Atención", MessageBoxButton.OK, MessageBoxImage.Warning);
+        // ── Errores de la fila de variante: texto rojo debajo y borde del campo en rojo ──
+
+        private static readonly System.Windows.Media.Brush _bordeNormal =
+            new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)
+                System.Windows.Media.ColorConverter.ConvertFromString("#222222"));
+        private static readonly System.Windows.Media.Brush _bordeError =
+            new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)
+                System.Windows.Media.ColorConverter.ConvertFromString("#C62828"));
+
+        private void MostrarErrorVariante(TextBox campo, string mensaje)
+        {
+            TxtErrorVarianteInput.Text = "⚠  " + mensaje;
+            TxtErrorVarianteInput.Visibility = Visibility.Visible;
+            campo.BorderBrush = _bordeError;
+            campo.Focus();
+            campo.SelectAll();
+        }
+
+        private void LimpiarErrorVariante()
+        {
+            if (TxtErrorVarianteInput == null) return;
+            TxtErrorVarianteInput.Visibility = Visibility.Collapsed;
+            TxtVarMedida.BorderBrush = _bordeNormal;
+            TxtVarPrecio.BorderBrush = _bordeNormal;
+            TxtVarStock.BorderBrush = _bordeNormal;
+        }
+
+        private void CampoVariante_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is TextBox tb && tb.BorderBrush == _bordeError)
+                LimpiarErrorVariante();
+        }
+
+        /// <summary>Stock: solo dígitos (no deja escribir signos negativos ni letras).</summary>
+        private void SoloDigitos_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            e.Handled = !e.Text.All(char.IsDigit);
+        }
+
+        /// <summary>Precio: dígitos y separadores (punto, coma, signo $).</summary>
+        private void Precio_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            e.Handled = !e.Text.All(c => char.IsDigit(c) || c is '.' or ',' or '$');
+        }
     }
 
     internal static class StringExtensions

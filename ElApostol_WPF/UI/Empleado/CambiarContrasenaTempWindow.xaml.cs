@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using ElApostol_WPF.UI.Shared;
 using System.Windows.Media;
 using ElApostol_WPF.Business;
 using ElApostol_WPF.Models;
@@ -176,7 +177,7 @@ namespace ElApostol_WPF.UI.Empleado
 
             if (!_auth.VerificarContrasenaActual(_usuario.Id, actual))
             {
-                MessageBox.Show("La contraseña temporal ingresada es incorrecta.",
+                Dialogo.Show("La contraseña temporal ingresada es incorrecta.",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -186,12 +187,12 @@ namespace ElApostol_WPF.UI.Empleado
                 var ok = _auth.CambiarContrasena(_usuario.Id, nueva, esTemporal: false);
                 if (!ok)
                 {
-                    MessageBox.Show("No se pudo actualizar la contraseña.",
+                    Dialogo.Show("No se pudo actualizar la contraseña.",
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                MessageBox.Show("¡Contraseña actualizada correctamente! Ya podés ingresar al sistema.",
+                Dialogo.Show("¡Contraseña actualizada correctamente! Ya podés ingresar al sistema.",
                     "Contraseña guardada", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 _usuario.ContrasenaEsTemporal = false;
@@ -202,7 +203,7 @@ namespace ElApostol_WPF.UI.Empleado
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al guardar:\n{ex.Message}",
+                Dialogo.Show($"Error al guardar:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

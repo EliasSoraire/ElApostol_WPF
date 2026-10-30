@@ -293,13 +293,37 @@
 
                         <StackPanel Grid.Column="0">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="CÓDIGO"/>
-                            <TextBox x:Name="TxtCodigo"
-                                     Style="{StaticResource InputStyle}"
-                                     Height="36"
-                                     TextChanged="Campo_Changed"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Prefijo fijo: sale de la categoría -->
+                                <Border Grid.Column="0" Height="36" MinWidth="58"
+                                        Background="#EAF3DE" BorderBrush="#222222"
+                                        BorderThickness="1,1,0,1" CornerRadius="5,0,0,5"
+                                        Padding="10,0"
+                                        ToolTip="El prefijo se elige con la categoría">
+                                    <TextBlock x:Name="TxtPrefijo" Text="···-"
+                                               FontSize="14" FontWeight="Bold" FontFamily="Consolas"
+                                               Foreground="#27500A"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBox x:Name="TxtCodigoNumero" Grid.Column="1"
+                                         Style="{StaticResource InputStyle}"
+                                         Height="36" MaxLength="6"
+                                         FontFamily="Consolas"
+                                         PreviewTextInput="TxtCodigoNumero_PreviewTextInput"
+                                         DataObject.Pasting="TxtCodigoNumero_Pasting"
+                                         TextChanged="TxtCodigoNumero_TextChanged"/>
+                            </Grid>
+                            <TextBlock x:Name="TxtCodigoHint"
+                                       FontSize="12" Foreground="#27500A"
+                                       Margin="0,4,0,0" TextWrapping="Wrap"
+                                       Text="Elegí una categoría para ver el último código usado."/>
                             <TextBlock x:Name="TxtErrorCodigo"
                                        FontSize="12" Foreground="#A32D2D"
-                                       Margin="0,3,0,0" Visibility="Collapsed"/>
+                                       Margin="0,3,0,0" Visibility="Collapsed" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="2">
@@ -331,11 +355,22 @@
 
                         <StackPanel Grid.Column="2">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="CATEGORÍA"/>
-                            <ComboBox x:Name="CmbCategoria"
-                                      Style="{StaticResource ComboStyle}"
-                                      SelectionChanged="CmbCategoria_SelectionChanged"
-                                      DisplayMemberPath="Nombre"
-                                      SelectedValuePath="Id"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox x:Name="CmbCategoria"
+                                          Style="{StaticResource ComboStyle}"
+                                          SelectionChanged="CmbCategoria_SelectionChanged"
+                                          DisplayMemberPath="Nombre"
+                                          SelectedValuePath="Id"/>
+                                <Button Grid.Column="1" Style="{StaticResource BtnCancelar}"
+                                        Content="⚙" FontSize="15" Padding="10,0" Height="36"
+                                        Margin="6,0,0,0"
+                                        ToolTip="Agregar, editar o eliminar categorías"
+                                        Click="BtnGestionarCategorias_Click"/>
+                            </Grid>
                             <TextBlock x:Name="TxtErrorCategoria"
                                        FontSize="12" Foreground="#A32D2D"
                                        Margin="0,3,0,0" Visibility="Collapsed"/>
@@ -385,7 +420,8 @@
                             <TextBlock Style="{StaticResource FieldLabel}" Text="MEDIDA / VARIANTE"/>
                             <TextBox x:Name="TxtVarMedida"
                                      Style="{StaticResource InputStyle}"
-                                     Height="36"/>
+                                     Height="36"
+                                     TextChanged="CampoVariante_TextChanged"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="2">
@@ -399,14 +435,18 @@
                             <TextBlock Style="{StaticResource FieldLabel}" Text="PRECIO ($)"/>
                             <TextBox x:Name="TxtVarPrecio"
                                      Style="{StaticResource InputStyle}"
-                                     Height="36"/>
+                                     Height="36"
+                                     PreviewTextInput="Precio_PreviewTextInput"
+                                     TextChanged="CampoVariante_TextChanged"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="6">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="STOCK INI."/>
                             <TextBox x:Name="TxtVarStock"
                                      Style="{StaticResource InputStyle}"
-                                     Height="36"/>
+                                     Height="36"
+                                     PreviewTextInput="SoloDigitos_PreviewTextInput"
+                                     TextChanged="CampoVariante_TextChanged"/>
                         </StackPanel>
 
                         <Button x:Name="BtnConfirmarVariante"
@@ -425,6 +465,14 @@
                                 Visibility="Collapsed"
                                 Margin="4,0,0,0"/>
                     </Grid>
+
+                    <!-- Error de la fila de variante -->
+                    <Border x:Name="TxtErrorVarianteBorde" Margin="0,8,0,0">
+                        <TextBlock x:Name="TxtErrorVarianteInput"
+                                   FontSize="12" FontWeight="Medium" Foreground="#A32D2D"
+                                   Background="#FCEBEB" Padding="10,6"
+                                   TextWrapping="Wrap" Visibility="Collapsed"/>
+                    </Border>
 
                     <!-- Tabla de variantes -->
                     <Border Margin="0,12,0,0"

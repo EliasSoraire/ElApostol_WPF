@@ -281,13 +281,25 @@ namespace ElApostol_WPF.UI.Shared
             if (yaEnCarrito + cant > stock)
             {
                 var disponible = Math.Max(0, stock - yaEnCarrito);
-                MessageBox.Show(
-                    $"Stock insuficiente de \"{_productoSeleccionado.Nombre}\" ({_varianteSeleccionada.Medida}).\n\n" +
-                    $"Stock actual: {stock}\n" +
-                    (yaEnCarrito > 0 ? $"Ya en el carrito: {yaEnCarrito}\n" : "") +
-                    $"Podés agregar como máximo: {disponible}",
-                    "Stock insuficiente", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                var detalle =
+                    $"{_productoSeleccionado.Nombre} · {_varianteSeleccionada.Medida}\n\n" +
+                    $"Pediste:  {cant}\n" +
+                    $"Stock actual:  {stock}\n" +
+                    (yaEnCarrito > 0 ? $"Ya en el carrito:  {yaEnCarrito}\n" : "");
+
+                if (disponible == 0)
+                {
+                    Dialogo.Show(detalle + "\nNo quedan unidades disponibles para agregar.",
+                        "Stock insuficiente", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Ofrecemos ajustar la cantidad al máximo disponible
+                if (!Dialogo.Confirmar(detalle + $"\nPodés agregar como máximo {disponible}.",
+                        "Stock insuficiente", $"Agregar {disponible}", "Cancelar", MessageBoxImage.Warning))
+                    return;
+
+                cant = disponible;
             }
 
             if (existente != null)
@@ -448,7 +460,7 @@ namespace ElApostol_WPF.UI.Shared
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al registrar la venta:\n{ex.Message}",
+                Dialogo.Show($"Error al registrar la venta:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -457,7 +469,7 @@ namespace ElApostol_WPF.UI.Shared
         {
             if (_carrito.Any())
             {
-                var res = MessageBox.Show(
+                var res = Dialogo.Show(
                     "¿Cancelar la venta? Se perderán los ítems cargados.",
                     "Cancelar venta",
                     MessageBoxButton.YesNo,

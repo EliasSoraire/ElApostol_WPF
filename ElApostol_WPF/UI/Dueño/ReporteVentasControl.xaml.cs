@@ -1,3 +1,4 @@
+using ElApostol_WPF.UI.Shared;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -194,7 +195,7 @@ namespace ElApostol_WPF.UI.Dueño
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al cargar el reporte:\n{ex.Message}",
+                Dialogo.Show($"Error al cargar el reporte:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
@@ -397,75 +398,26 @@ namespace ElApostol_WPF.UI.Dueño
             try
             {
                 var ci = new CultureInfo("es-AR");
-                var lineas = new StringBuilder();
-                lineas.AppendLine($"Ventas del {fecha:dd/MM/yyyy}");
-                lineas.AppendLine(new string('─', 50));
-
                 var empleadoId = EmpleadoSeleccionadoId;
+                var ventas = new VentaRepository().ObtenerVentasConDetalle(
+                    fecha.Date, fecha.Date.AddDays(1), empleadoId);
 
-                using var conn = ConexionDB.ObtenerConexion();
-                conn.Open();
-                var cmd = new SqlCommand($@"
-                    SELECT v.id,
-                           v.numero_comprobante,
-                           v.fecha_hora,
-                           u.nombre_completo,
-                           v.metodo_pago,
-                           v.total,
-                           p.nombre,
-                           vp.medida,
-                           dv.cantidad,
-                           dv.subtotal_linea
-                    FROM ventas v
-                    INNER JOIN usuarios u ON u.id = v.usuario_id
-                    LEFT JOIN detalle_ventas     dv ON dv.venta_id = v.id
-                    LEFT JOIN variantes_producto vp ON vp.id = dv.variante_id
-                    LEFT JOIN productos          p  ON p.id  = vp.producto_id
-                    WHERE CAST(v.fecha_hora AS DATE) = @fecha
-                    {(empleadoId != null ? "AND v.usuario_id = @emp" : "")}
-                    ORDER BY v.fecha_hora, v.id, dv.id", conn);
-                cmd.Parameters.AddWithValue("@fecha", fecha);
-                if (empleadoId != null)
-                    cmd.Parameters.AddWithValue("@emp", empleadoId.Value);
+                var dia = fecha.ToString("dddd d 'de' MMMM", ci);
+                dia = char.ToUpper(dia[0]) + dia[1..];
+                var vendedores = ventas.Select(v => v.UsuarioId).Distinct().Count();
+                var subtitulo = empleadoId != null
+                    ? $"{fecha:dd/MM/yyyy} · {CmbEmpleado.SelectedItem}"
+                    : $"{fecha:dd/MM/yyyy} · {vendedores} vendedor{(vendedores != 1 ? "es" : "")}";
 
-                using var r = cmd.ExecuteReader();
-                int count = 0;
-                int ventaActual = -1;
-                while (r.Read())
+                var ventana = new DetalleVentasWindow($"Ventas del {dia}", subtitulo, ventas)
                 {
-                    var ventaId = r.GetInt32(0);
-                    if (ventaId != ventaActual)
-                    {
-                        if (count > 0) lineas.AppendLine();
-                        count++;
-                        ventaActual = ventaId;
-
-                        var nro = r.GetString(1);
-                        var hora = r.GetDateTime(2).ToString("HH:mm");
-                        var emp = r.GetString(3);
-                        var metodo = r.GetString(4);
-                        var total = r.GetDecimal(5).ToString("C0", ci);
-                        lineas.AppendLine($"{nro}  {hora}  {emp}  [{metodo}]  {total}");
-                    }
-
-                    if (!r.IsDBNull(6))
-                    {
-                        var medida = r.IsDBNull(7) ? "" : $" ({r.GetString(7)})";
-                        var cant = r.GetInt32(8);
-                        var sub = r.GetDecimal(9).ToString("C0", ci);
-                        lineas.AppendLine($"    {cant} × {r.GetString(6)}{medida}  —  {sub}");
-                    }
-                }
-
-                if (count == 0)
-                    lineas.AppendLine("Sin ventas registradas.");
-
-                MessageBox.Show(lineas.ToString(), $"Detalle — {fecha:dd/MM/yyyy}",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                    Owner = Window.GetWindow(this)
+                };
+                ventana.ShowDialog();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al cargar el detalle:\n{ex.Message}",
+                Dialogo.Show($"Error al cargar el detalle:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -474,7 +426,7 @@ namespace ElApostol_WPF.UI.Dueño
         {
             if (_filas.Count == 0)
             {
-                MessageBox.Show("No hay datos para exportar.", "Exportar PDF",
+                Dialogo.Show("No hay datos para exportar.", "Exportar PDF",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -600,7 +552,7 @@ namespace ElApostol_WPF.UI.Dueño
 
                 Reports.ReporteVentasPdf.Generate(ruta, data);
 
-                var res = MessageBox.Show(
+                var res = Dialogo.Show(
                     $"PDF exportado correctamente.\n{ruta}\n\n¿Deseas abrirlo ahora?",
                     "Exportar PDF",
                     MessageBoxButton.YesNo,
@@ -617,7 +569,7 @@ namespace ElApostol_WPF.UI.Dueño
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al exportar el PDF:\n{ex.Message}",
+                Dialogo.Show($"Error al exportar el PDF:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

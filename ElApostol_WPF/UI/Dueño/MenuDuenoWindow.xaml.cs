@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using ElApostol_WPF.UI.Shared;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -121,16 +122,16 @@ namespace ElApostol_WPF.UI.Dueño
 
             var soloInactivos = ChkVerInactivos?.IsChecked == true;
 
-            var productos = _repo.ObtenerPaginado(
+            var filas = _repo.ObtenerInventarioPaginado(
                 busqueda, categoriaId, _paginaActual, PorPagina, out _totalRegistros, soloInactivos);
 
-            DgProductos.ItemsSource = productos.Select(p => new ProductoRow(p)).ToList();
+            DgProductos.ItemsSource = filas.Select(f => new InventarioRow(f)).ToList();
 
             var desde = (_paginaActual - 1) * PorPagina + 1;
             var hasta = Math.Min(_paginaActual * PorPagina, _totalRegistros);
             TxtPaginaInfo.Text = _totalRegistros == 0
                 ? "Sin resultados"
-                : $"Mostrando {desde}–{hasta} de {_totalRegistros} productos";
+                : $"Mostrando {desde}–{hasta} de {_totalRegistros} variantes";
 
             RenderizarPaginacion();
         }
@@ -244,7 +245,7 @@ namespace ElApostol_WPF.UI.Dueño
             var producto = _repo.ObtenerPorId(id);
             if (producto == null) return;
 
-            var res = MessageBox.Show(
+            var res = Dialogo.Show(
                 $"¿Reactivar \"{producto.Nombre}\" ({producto.CodigoInterno})?\n\n" +
                 "Va a volver a aparecer en el inventario y en nuevas ventas, con el stock y precios que tenía.",
                 "Reactivar producto", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -254,12 +255,12 @@ namespace ElApostol_WPF.UI.Dueño
             try
             {
                 _repo.ReactivarProducto(id);
-                MessageBox.Show($"\"{producto.Nombre}\" fue reactivado.",
+                Dialogo.Show($"\"{producto.Nombre}\" fue reactivado.",
                     "Producto reactivado", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al reactivar:\n{ex.Message}",
+                Dialogo.Show($"Error al reactivar:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
@@ -293,7 +294,7 @@ namespace ElApostol_WPF.UI.Dueño
 
             if (_repo.TieneVentasAsociadas(id))
             {
-                var res = MessageBox.Show(
+                var res = Dialogo.Show(
                     $"\"{producto.Nombre}\" tiene ventas registradas, así que no se puede eliminar sin perder ese historial.\n\n" +
                     "¿Querés desactivarlo en su lugar? Va a dejar de aparecer en el inventario y en nuevas ventas, pero sus ventas anteriores se mantienen intactas.",
                     "No se puede eliminar",
@@ -303,12 +304,12 @@ namespace ElApostol_WPF.UI.Dueño
                 if (res != MessageBoxResult.Yes) return;
 
                 _repo.DesactivarProducto(id);
-                MessageBox.Show($"\"{producto.Nombre}\" fue desactivado.",
+                Dialogo.Show($"\"{producto.Nombre}\" fue desactivado.",
                     "Producto desactivado", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
-                var confirmar = MessageBox.Show(
+                var confirmar = Dialogo.Show(
                     $"¿Eliminar \"{producto.Nombre}\" y todas sus variantes? Esta acción no se puede deshacer.",
                     "Confirmar eliminación",
                     MessageBoxButton.YesNo,
@@ -321,6 +322,28 @@ namespace ElApostol_WPF.UI.Dueño
 
             CargarMetricas();
             CargarProductos();
+        }
+
+        private void CardStockCritico_Click(object sender, MouseButtonEventArgs e)
+        {
+            var ventana = new StockCriticoWindow { Owner = this };
+            ventana.ShowDialog();
+        }
+
+        private void BtnCategorias_Click(object sender, RoutedEventArgs e)
+        {
+            var ventana = new GestionCategoriasWindow { Owner = this };
+            ventana.ShowDialog();
+            if (ventana.HuboCambios)
+            {
+                var seleccion = (CmbCategoria.SelectedItem as ComboBoxItem)?.Tag as int?;
+                CmbCategoria.SelectionChanged -= CmbCategoria_SelectionChanged;
+                CargarCategorias();
+                var item = CmbCategoria.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag as int? == seleccion);
+                CmbCategoria.SelectedItem = item ?? CmbCategoria.Items[0];
+                CmbCategoria.SelectionChanged += CmbCategoria_SelectionChanged;
+                CargarProductos();
+            }
         }
 
         private void BtnInventario_Click(object sender, RoutedEventArgs e)
@@ -383,9 +406,9 @@ namespace ElApostol_WPF.UI.Dueño
         }
     }
 
-    public class ProductoRow
+    public class InventarioRow
     {
-        public int Id { get; }
+        public int ProductoId { get; }
         public string CodigoInterno { get; }
         public string Nombre { get; }
         public string Marca { get; }
@@ -398,56 +421,38 @@ namespace ElApostol_WPF.UI.Dueño
         public Visibility VisibilidadActivo { get; }
         public Visibility VisibilidadInactivo { get; }
 
-        public ProductoRow(Producto p)
+        public InventarioRow(FilaInventario f)
         {
-            // Con varias medidas, el color del badge refleja la variante en peor estado
-            var v = p.Variantes
-                .OrderBy(x => x.StockMinimo == 0 ? double.MaxValue : x.StockActual / (double)x.StockMinimo)
-                .FirstOrDefault();
+            ProductoId = f.ProductoId;
+            CodigoInterno = f.CodigoInterno;
+            Nombre = f.Nombre;
+            Marca = f.Marca ?? "-";
+            NombreCategoria = f.NombreCategoria ?? "-";
+            VisibilidadActivo = f.Activo ? Visibility.Visible : Visibility.Collapsed;
+            VisibilidadInactivo = f.Activo ? Visibility.Collapsed : Visibility.Visible;
 
-            Id = p.Id;
-            CodigoInterno = p.CodigoInterno;
-            Nombre = p.Nombre;
-            Marca = p.Marca ?? "-";
-            NombreCategoria = p.NombreCategoria ?? "-";
-            VisibilidadActivo = p.Activo ? Visibility.Visible : Visibility.Collapsed;
-            VisibilidadInactivo = p.Activo ? Visibility.Collapsed : Visibility.Visible;
-
-            if (p.Variantes.Count > 1)
+            if (f.VarianteId == null)
             {
-                var min = p.Variantes.Min(x => x.PrecioUnitario);
-                var max = p.Variantes.Max(x => x.PrecioUnitario);
-                PrecioDisplay = min == max ? $"${min:N0}" : $"${min:N0} – ${max:N0}";
-                MedidaDisplay = $"{p.Variantes.Count} medidas";
-                StockDisplay = p.Variantes.Sum(x => x.StockActual).ToString();
+                PrecioDisplay = "-";
+                MedidaDisplay = "Sin medidas";
+                StockDisplay = "-";
             }
             else
             {
-                PrecioDisplay = v != null ? $"${v.PrecioUnitario:N0}" : "-";
-                MedidaDisplay = v?.Medida ?? "-";
-                StockDisplay = v?.StockActual.ToString() ?? "-";
+                PrecioDisplay = $"${f.PrecioUnitario:N0}";
+                MedidaDisplay = f.Medida ?? "-";
+                StockDisplay = f.StockActual.ToString();
             }
 
-            if (v == null)
+            var (bg, fg) = f.StockEstado switch
             {
-                StockBadgeBg = new SolidColorBrush(Colors.LightGray);
-                StockBadgeFg = new SolidColorBrush(Colors.Gray);
-            }
-            else if (v.StockActual < v.StockMinimo / 2)
-            {
-                StockBadgeBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FCEBEB"));
-                StockBadgeFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#791F1F"));
-            }
-            else if (v.StockActual < v.StockMinimo)
-            {
-                StockBadgeBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FAEEDA"));
-                StockBadgeFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#633806"));
-            }
-            else
-            {
-                StockBadgeBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EAF3DE"));
-                StockBadgeFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#27500A"));
-            }
+                "crit" => ("#FCEBEB", "#791F1F"),
+                "low"  => ("#FAEEDA", "#633806"),
+                "ok"   => ("#EAF3DE", "#27500A"),
+                _      => ("#EEEEEE", "#888888"),
+            };
+            StockBadgeBg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(bg));
+            StockBadgeFg = new SolidColorBrush((Color)ColorConverter.ConvertFromString(fg));
         }
     }
 }

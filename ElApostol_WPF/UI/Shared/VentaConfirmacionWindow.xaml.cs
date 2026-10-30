@@ -93,7 +93,7 @@ namespace ElApostol_WPF.UI.Shared
             }
             catch (Data.StockInsuficienteException ex)
             {
-                MessageBox.Show(ex.Message, "Stock insuficiente",
+                Dialogo.Show(ex.Message, "Stock insuficiente",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 DialogResult = false;
                 Close();
@@ -101,7 +101,7 @@ namespace ElApostol_WPF.UI.Shared
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al registrar la venta:\n{ex.Message}",
+                Dialogo.Show($"Error al registrar la venta:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 BtnConfirmar.IsEnabled = true;
                 return;
@@ -131,7 +131,7 @@ namespace ElApostol_WPF.UI.Shared
 
                 GenerarPdf(rutaPdf);
 
-                var res = MessageBox.Show(
+                var res = Dialogo.Show(
                     $"Comprobante guardado en:\n{rutaPdf}\n\n¿Desea abrirlo ahora?",
                     "PDF guardado",
                     MessageBoxButton.YesNo,
@@ -142,7 +142,7 @@ namespace ElApostol_WPF.UI.Shared
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                Dialogo.Show(
                     $"Error al generar el PDF:\n{ex.Message}",
                     "Error",
                     MessageBoxButton.OK,

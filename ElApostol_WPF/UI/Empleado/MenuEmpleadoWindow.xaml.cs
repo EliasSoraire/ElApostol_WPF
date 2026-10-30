@@ -27,15 +27,7 @@ namespace ElApostol_WPF.UI.Empleado
         public string PrecioDisplay => $"${PrecioUnitario:N0}";
         public bool TieneStock => StockActual > 0;
         public string AccionLabel => TieneStock ? "Vender" : "Sin stock";
-        public string StockEstado
-        {
-            get
-            {
-                if (StockActual <= 0 || StockActual <= StockMinimo / 2) return "crit";
-                if (StockActual <= StockMinimo) return "low";
-                return "ok";
-            }
-        }
+        public string StockEstado { get; set; } = "ok";
     }
 
     public partial class MenuEmpleadoWindow : Window
@@ -163,23 +155,23 @@ namespace ElApostol_WPF.UI.Empleado
                                   ? _categorias.FirstOrDefault(c => c.Nombre == catNombre)?.Id
                                   : null;
 
-                var productos = _productoRepo.ObtenerPaginado(
-                    busqueda, categoriaId, _paginaActual, PageSize, out _totalRegistros);
-
-                var filas = productos
-                    .SelectMany(p => p.Variantes.Select(v => new VarianteVM
+                var filas = _productoRepo.ObtenerInventarioPaginado(
+                        busqueda, categoriaId, _paginaActual, PageSize, out _totalRegistros,
+                        soloConVariantes: true)
+                    .Select(f => new VarianteVM
                     {
-                        VarianteId = v.Id,
-                        ProductoId = p.Id,
-                        CodigoInterno = p.CodigoInterno,
-                        Nombre = p.Nombre,
-                        Marca = p.Marca ?? "—",
-                        NombreCategoria = p.NombreCategoria ?? "",
-                        Medida = v.Medida ?? "",
-                        PrecioUnitario = v.PrecioUnitario,
-                        StockActual = v.StockActual,
-                        StockMinimo = v.StockMinimo,
-                    }))
+                        VarianteId = f.VarianteId!.Value,
+                        ProductoId = f.ProductoId,
+                        CodigoInterno = f.CodigoInterno,
+                        Nombre = f.Nombre,
+                        Marca = f.Marca ?? "—",
+                        NombreCategoria = f.NombreCategoria ?? "",
+                        Medida = f.Medida ?? "",
+                        PrecioUnitario = f.PrecioUnitario,
+                        StockActual = f.StockActual,
+                        StockMinimo = f.StockMinimo,
+                        StockEstado = f.StockEstado,
+                    })
                     .ToList();
 
                 ListaInventario.ItemsSource = filas;
@@ -188,7 +180,7 @@ namespace ElApostol_WPF.UI.Empleado
 
                 int desde = _totalRegistros == 0 ? 0 : (_paginaActual - 1) * PageSize + 1;
                 int hasta = Math.Min(_paginaActual * PageSize, _totalRegistros);
-                TxtPaginacionInfo.Text = $"Mostrando {desde}–{hasta} de {_totalRegistros} productos";
+                TxtPaginacionInfo.Text = $"Mostrando {desde}–{hasta} de {_totalRegistros} variantes";
 
                 RenderizarBotonesPaginacion();
                 ActualizarAlertaCriticos();
@@ -233,12 +225,12 @@ namespace ElApostol_WPF.UI.Empleado
                 var criticos = _productoRepo.ObtenerVariantesCriticas();
                 if (criticos.Count > 0)
                 {
-                    const int maxMostrar = 3;
-                    var lista = string.Join(", ", criticos.Take(maxMostrar));
-                    var resto = criticos.Count > maxMostrar ? $" y {criticos.Count - maxMostrar} más" : "";
-
-                    TxtAlerta.Text = $"Stock crítico: {lista}{resto}";
-                    AlertaBanner.ToolTip = string.Join("\n", criticos);
+                    var sinStock = criticos.Count(c => c.StockActual <= 0);
+                    TxtAlerta.Text = criticos.Count == 1
+                        ? "1 variante con stock crítico"
+                        : $"{criticos.Count} variantes con stock crítico";
+                    if (sinStock > 0)
+                        TxtAlerta.Text += $" · {sinStock} sin stock";
                     AlertaBanner.Visibility = Visibility.Visible;
                 }
                 else
@@ -249,6 +241,12 @@ namespace ElApostol_WPF.UI.Empleado
             catch { AlertaBanner.Visibility = Visibility.Collapsed; }
         }
 
+
+        private void BtnVerCriticos_Click(object sender, RoutedEventArgs e)
+        {
+            var ventana = new StockCriticoWindow { Owner = this };
+            ventana.ShowDialog();
+        }
 
         private void RenderizarBotonesPaginacion()
         {
@@ -349,7 +347,7 @@ namespace ElApostol_WPF.UI.Empleado
 
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
         {
-            var res = MessageBox.Show("¿Cerrás sesión?", "Cerrar sesión",
+            var res = Dialogo.Show("¿Cerrás sesión?", "Cerrar sesión",
                                       MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (res == MessageBoxResult.Yes)
             {
@@ -371,6 +369,6 @@ namespace ElApostol_WPF.UI.Empleado
         }
 
         private void MostrarError(string msg, Exception ex) =>
-            MessageBox.Show($"{msg}:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogo.Show($"{msg}:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 }

@@ -338,6 +338,86 @@ namespace ElApostol_WPF.Data
             return lista;
         }
 
+        /// <summary>
+        /// Ventas entre <paramref name="desde"/> (inclusive) y <paramref name="hasta"/> (exclusive),
+        /// con vendedor y renglones. Opcionalmente filtradas por vendedor o por una venta puntual.
+        /// </summary>
+        public List<VentaDetallada> ObtenerVentasConDetalle(DateTime desde, DateTime hasta,
+                                                            int? usuarioId = null, int? ventaId = null)
+        {
+            var ventas = new List<VentaDetallada>();
+            var porId = new Dictionary<int, VentaDetallada>();
+
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var filtro = "";
+            if (usuarioId != null) filtro += " AND v.usuario_id = @uid";
+            if (ventaId != null) filtro += " AND v.id = @vid";
+
+            var cmd = new SqlCommand($@"
+                SELECT v.id, v.numero_comprobante, v.fecha_hora, v.usuario_id, u.nombre_completo,
+                       v.metodo_pago, v.subtotal, v.monto_recargo, v.total, v.observaciones,
+                       dv.id, dv.variante_id, p.nombre, vp.medida,
+                       dv.cantidad, dv.precio_unitario_historico, dv.subtotal_linea
+                FROM ventas v
+                INNER JOIN usuarios u ON u.id = v.usuario_id
+                LEFT JOIN detalle_ventas     dv ON dv.venta_id = v.id
+                LEFT JOIN variantes_producto vp ON vp.id = dv.variante_id
+                LEFT JOIN productos          p  ON p.id  = vp.producto_id
+                WHERE v.fecha_hora >= @desde AND v.fecha_hora < @hasta {filtro}
+                ORDER BY v.fecha_hora, v.id, dv.id", conn);
+
+            cmd.Parameters.AddWithValue("@desde", desde);
+            cmd.Parameters.AddWithValue("@hasta", hasta);
+            if (usuarioId != null) cmd.Parameters.AddWithValue("@uid", usuarioId.Value);
+            if (ventaId != null) cmd.Parameters.AddWithValue("@vid", ventaId.Value);
+
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                var id = r.GetInt32(0);
+                if (!porId.TryGetValue(id, out var venta))
+                {
+                    venta = new VentaDetallada
+                    {
+                        Id = id,
+                        NumeroComprobante = r.GetString(1),
+                        FechaHora = r.GetDateTime(2),
+                        UsuarioId = r.GetInt32(3),
+                        Empleado = r.GetString(4),
+                        MetodoPago = r.GetString(5),
+                        Subtotal = r.GetDecimal(6),
+                        MontoRecargo = r.GetDecimal(7),
+                        Total = r.GetDecimal(8),
+                        Observaciones = r.IsDBNull(9) ? null : r.GetString(9),
+                    };
+                    porId[id] = venta;
+                    ventas.Add(venta);
+                }
+
+                if (!r.IsDBNull(10))
+                {
+                    venta.Lineas.Add(new DetalleVenta
+                    {
+                        Id = r.GetInt32(10),
+                        VentaId = id,
+                        VarianteId = r.GetInt32(11),
+                        NombreProducto = r.IsDBNull(12) ? "—" : r.GetString(12),
+                        Medida = r.IsDBNull(13) ? null : r.GetString(13),
+                        Cantidad = r.GetInt32(14),
+                        PrecioUnitarioHistorico = r.GetDecimal(15),
+                        SubtotalLinea = r.GetDecimal(16),
+                    });
+                }
+            }
+
+            return ventas;
+        }
+
+        public VentaDetallada? ObtenerVentaConDetalle(int ventaId) =>
+            ObtenerVentasConDetalle(new DateTime(1900, 1, 1), new DateTime(9999, 1, 1), ventaId: ventaId)
+                .FirstOrDefault();
     }
 
     public class StockInsuficienteException : Exception

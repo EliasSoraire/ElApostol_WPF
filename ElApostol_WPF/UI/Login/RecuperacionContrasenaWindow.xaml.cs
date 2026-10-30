@@ -1,4 +1,5 @@
 ﻿using ElApostol_WPF.Business;
+using ElApostol_WPF.UI.Shared;
 using ElApostol_WPF.Data;
 using ElApostol_WPF.Models;
 using System.Windows;
@@ -134,7 +135,7 @@ namespace ElApostol_WPF.UI.Login
                 var ok = _auth.CambiarContrasena(_usuarioDueno.Id, nueva, esTemporal: false);
                 if (!ok)
                 {
-                    MessageBox.Show("No se pudo guardar la contraseña.",
+                    Dialogo.Show("No se pudo guardar la contraseña.",
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -144,7 +145,7 @@ namespace ElApostol_WPF.UI.Login
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al guardar:\n{ex.Message}",
+                Dialogo.Show($"Error al guardar:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

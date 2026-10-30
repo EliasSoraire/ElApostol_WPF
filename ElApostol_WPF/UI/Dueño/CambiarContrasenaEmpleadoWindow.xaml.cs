@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using ElApostol_WPF.UI.Shared;
 using System.Windows.Controls;
 using System.Windows.Media;
 using ElApostol_WPF.Business;
@@ -186,12 +187,12 @@ namespace ElApostol_WPF.UI.Dueño
 
                 if (!ok)
                 {
-                    MessageBox.Show("No se pudo actualizar la contraseña.", "Error",
+                    Dialogo.Show("No se pudo actualizar la contraseña.", "Error",
                         MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                MessageBox.Show(
+                Dialogo.Show(
                     $"Contraseña de {emp.NombreCompleto} actualizada correctamente.\nEl empleado deberá cambiarla al ingresar.",
                     "Contraseña guardada",
                     MessageBoxButton.OK,
@@ -202,7 +203,7 @@ namespace ElApostol_WPF.UI.Dueño
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al guardar:\n{ex.Message}", "Error",
+                Dialogo.Show($"Error al guardar:\n{ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

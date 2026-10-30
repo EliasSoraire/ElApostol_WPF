@@ -1,3 +1,4 @@
+using ElApostol_WPF.UI.Shared;
 using ElApostol_WPF.Business;
 using ElApostol_WPF.Data;
 using ElApostol_WPF.Models;
@@ -250,7 +251,7 @@ namespace ElApostol_WPF.UI.Dueño
 
             if (string.IsNullOrEmpty(nombre) || string.IsNullOrEmpty(usuario) || string.IsNullOrEmpty(pass))
             {
-                MessageBox.Show("Completá todos los campos.", "Campos requeridos",
+                Dialogo.Show("Completá todos los campos.", "Campos requeridos",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -259,7 +260,7 @@ namespace ElApostol_WPF.UI.Dueño
             {
                 if (_repo.ExisteNombreUsuario(usuario))
                 {
-                    MessageBox.Show($"Ya existe un usuario \"@{usuario}\". Elegí otro nombre de usuario.",
+                    Dialogo.Show($"Ya existe un usuario \"@{usuario}\". Elegí otro nombre de usuario.",
                         "Usuario repetido", MessageBoxButton.OK, MessageBoxImage.Warning);
                     TxtNuevoUsuario.Focus();
                     return;
@@ -272,17 +273,17 @@ namespace ElApostol_WPF.UI.Dueño
                 PanelDetalle.Visibility = Visibility.Collapsed;
                 CargarEmpleados();
 
-                MessageBox.Show($"Empleado \"{nombre}\" creado correctamente.",
+                Dialogo.Show($"Empleado \"{nombre}\" creado correctamente.",
                     "Empleado creado", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number is 2627 or 2601)
             {
-                MessageBox.Show($"Ya existe un usuario \"@{usuario}\". Elegí otro nombre de usuario.",
+                Dialogo.Show($"Ya existe un usuario \"@{usuario}\". Elegí otro nombre de usuario.",
                     "Usuario repetido", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al crear el empleado:\n{ex.Message}",
+                Dialogo.Show($"Error al crear el empleado:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -305,12 +306,12 @@ namespace ElApostol_WPF.UI.Dueño
                 var auth = new AuthService();
                 if (!auth.CambiarContrasena(_empleadoSeleccionado.Id, nuevaPass, esTemporal: true))
                 {
-                    MessageBox.Show("No se pudo resetear la contraseña. Verificá la conexión e intentá de nuevo.",
+                    Dialogo.Show("No se pudo resetear la contraseña. Verificá la conexión e intentá de nuevo.",
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                MessageBox.Show(
+                Dialogo.Show(
                     $"Contraseña de {_empleadoSeleccionado.NombreCompleto} reseteada.\n\nNueva contraseña temporal:\n{nuevaPass}\n\nComunicala al empleado.",
                     "Contraseña reseteada",
                     MessageBoxButton.OK,
@@ -318,7 +319,7 @@ namespace ElApostol_WPF.UI.Dueño
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al resetear:\n{ex.Message}",
+                Dialogo.Show($"Error al resetear:\n{ex.Message}",
                     "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -330,7 +331,7 @@ namespace ElApostol_WPF.UI.Dueño
             if (_empleadoSeleccionado == null) return;
 
             var accion = _empleadoSeleccionado.Activo ? "desactivar" : "activar";
-            var result = MessageBox.Show(
+            var result = Dialogo.Show(
                 $"¿Querés {accion} a {_empleadoSeleccionado.NombreCompleto}?",
                 "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question);
 

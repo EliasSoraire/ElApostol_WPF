@@ -1,3 +1,4 @@
+using ElApostol_WPF.UI.Shared;
 using ElApostol_WPF.Data;
 using ElApostol_WPF.Models;
 using System.Collections.ObjectModel;
@@ -55,7 +56,7 @@ namespace ElApostol_WPF.UI.Empleado
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al cargar el registro:\n{ex.Message}",
+                Dialogo.Show($"Error al cargar el registro:\n{ex.Message}",
                                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -190,40 +191,96 @@ namespace ElApostol_WPF.UI.Empleado
             if (sender is not Button btn) return;
             if (btn.Tag is not int ventaId) return;
 
-            var vm = _todasLasVentas.FirstOrDefault(v => v.VentaId == ventaId);
-            if (vm == null) return;
-
-            var texto = new System.Text.StringBuilder();
-            texto.AppendLine($"Comprobante: {vm.NumeroComprobante}");
-            texto.AppendLine($"Fecha: {vm.FechaHora:dd/MM/yyyy HH:mm}");
-            texto.AppendLine($"Método: {vm.MetodoPagoDisplay}");
-            texto.AppendLine();
-
             try
             {
-                foreach (var d in _ventaRepo.ObtenerDetallesVenta(ventaId))
+                var venta = _ventaRepo.ObtenerVentaConDetalle(ventaId);
+                if (venta == null) return;
+
+                var ventana = new DetalleVentasWindow(
+                    $"Venta {venta.NumeroComprobante}",
+                    $"{venta.FechaHora:dd/MM/yyyy HH:mm} · {venta.MetodoPagoDisplay} · {venta.Unidades} unidad{(venta.Unidades != 1 ? "es" : "")}",
+                    new List<VentaDetallada> { venta })
                 {
-                    var medida = string.IsNullOrEmpty(d.Medida) ? "" : $" ({d.Medida})";
-                    texto.AppendLine($"{d.Cantidad} × {d.NombreProducto}{medida}  —  ${d.PrecioUnitarioHistorico:N0} c/u  =  ${d.SubtotalLinea:N0}");
-                }
+                    Owner = Window.GetWindow(this)
+                };
+                ventana.ShowDialog();
             }
             catch (Exception ex)
             {
-                texto.AppendLine($"(No se pudo cargar el detalle: {ex.Message})");
+                Dialogo.Show($"No se pudo cargar el detalle:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-
-            texto.AppendLine();
-            texto.AppendLine($"Unidades: {vm.CantidadItems}");
-            texto.Append($"Total: {vm.TotalDisplay}");
-
-            MessageBox.Show(texto.ToString(), "Detalle de venta",
-                MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BtnExportar_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("La exportación a PDF estará disponible próximamente.",
-                            "Exportar", MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                var (desde, hasta) = ObtenerRangoFechas();
+                var ventas = _ventaRepo.ObtenerVentasConDetalle(desde, hasta.AddTicks(1), _usuario.Id);
+
+                if (ventas.Count == 0 &&
+                    !Dialogo.Confirmar("No hay ventas en el período seleccionado.\n¿Querés generar el cierre igual (en $0)?",
+                        "Cierre de caja", "Generar igual", "Cancelar"))
+                    return;
+
+                var periodo = _periodoActual switch
+                {
+                    "hoy" => $"Hoy, {desde:dd/MM/yyyy}",
+                    "ayer" => $"Ayer, {desde:dd/MM/yyyy}",
+                    "semana" => $"Semana del {desde:dd/MM/yyyy} al {hasta:dd/MM/yyyy}",
+                    _ => $"Día {desde:dd/MM/yyyy}"
+                };
+
+                var carpeta = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Cierres de caja");
+                System.IO.Directory.CreateDirectory(carpeta);
+
+                var nombreArchivo = desde.Date == hasta.Date
+                    ? $"cierre_caja_{_usuario.NombreUsuario}_{desde:yyyyMMdd}.pdf"
+                    : $"cierre_caja_{_usuario.NombreUsuario}_{desde:yyyyMMdd}_{hasta:yyyyMMdd}.pdf";
+
+                var dialogo = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Guardar cierre de caja",
+                    Filter = "Documento PDF (*.pdf)|*.pdf",
+                    InitialDirectory = carpeta,
+                    FileName = nombreArchivo,
+                    DefaultExt = ".pdf"
+                };
+                if (dialogo.ShowDialog(Window.GetWindow(this)) != true) return;
+
+                Reports.CierreCajaPdf.Generate(dialogo.FileName, new Reports.CierreCajaData
+                {
+                    Empleado = _usuario.NombreCompleto,
+                    Usuario = _usuario.NombreUsuario,
+                    Periodo = periodo,
+                    FechaDesde = desde,
+                    FechaHasta = hasta,
+                    FechaGeneracion = DateTime.Now,
+                    Ventas = ventas
+                });
+
+                if (Dialogo.Confirmar($"El cierre de caja se guardó en:\n{dialogo.FileName}\n\n¿Querés abrirlo ahora?",
+                        "Cierre de caja generado", "Abrir PDF", "Cerrar", MessageBoxImage.Information))
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = dialogo.FileName,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch (System.IO.IOException ex)
+            {
+                Dialogo.Show($"No se pudo guardar el PDF. Si lo tenés abierto, cerralo e intentá de nuevo.\n\n{ex.Message}",
+                    "Cierre de caja", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                Dialogo.Show($"Error al generar el cierre de caja:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 

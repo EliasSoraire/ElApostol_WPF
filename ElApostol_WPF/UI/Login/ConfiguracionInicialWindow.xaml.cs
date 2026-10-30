@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using ElApostol_WPF.UI.Shared;
 using System.Windows.Controls;
 using System.Windows.Media;
 using ElApostol_WPF.Business;
@@ -109,7 +110,7 @@ namespace ElApostol_WPF.UI.Login
                 var okPass = _auth.CambiarContrasena(_usuario.Id, _nuevaContrasena, esTemporal: false);
                 if (!okPass)
                 {
-                    MessageBox.Show("No se pudo guardar la contraseña.",
+                    Dialogo.Show("No se pudo guardar la contraseña.",
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -117,7 +118,7 @@ namespace ElApostol_WPF.UI.Login
                 var okPregunta = _auth.GuardarPreguntaSecreta(_usuario.Id, pregunta, respuesta);
                 if (!okPregunta)
                 {
-                    MessageBox.Show("No se pudo guardar la pregunta secreta.",
+                    Dialogo.Show("No se pudo guardar la pregunta secreta.",
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
@@ -127,7 +128,7 @@ namespace ElApostol_WPF.UI.Login
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al guardar:\n{ex.Message}",
+                Dialogo.Show($"Error al guardar:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
