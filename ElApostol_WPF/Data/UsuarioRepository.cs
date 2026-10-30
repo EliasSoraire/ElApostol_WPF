@@ -121,6 +121,17 @@ namespace ElApostol_WPF.Data
             cmd.ExecuteNonQuery();
         }
 
+        public bool ExisteNombreUsuario(string nombreUsuario)
+        {
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+            var cmd = new SqlCommand(
+                "SELECT CASE WHEN EXISTS (SELECT 1 FROM usuarios WHERE usuario = @usuario) THEN 1 ELSE 0 END",
+                conn);
+            cmd.Parameters.AddWithValue("@usuario", nombreUsuario);
+            return (int)cmd.ExecuteScalar() == 1;
+        }
+
         public void CrearEmpleado(string nombreCompleto, string nombreUsuario, string contrasenaHash)
         {
             using var conn = ConexionDB.ObtenerConexion();

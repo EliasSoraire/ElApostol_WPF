@@ -70,6 +70,62 @@ namespace ElApostol_WPF.UI.Dueño
 
         private void Campo_Changed(object sender, EventArgs e) => ActualizarPreview();
 
+        private string? _codigoSugerido;
+
+        private void CmbCategoria_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // En alta, si el código está vacío o es el que sugerimos antes, proponemos el siguiente de la categoría
+            if (!_modoEdicion && CmbCategoria.SelectedItem is Categoria cat)
+            {
+                var actual = TxtCodigo.Text.Trim();
+                if (actual.Length == 0 || actual == _codigoSugerido)
+                {
+                    try
+                    {
+                        _codigoSugerido = _repo.GenerarSiguienteCodigo(ObtenerPrefijo(cat));
+                        TxtCodigo.Text = _codigoSugerido;
+                    }
+                    catch { }
+                }
+            }
+
+            ActualizarPreview();
+        }
+
+        /// <summary>Prefijo de código según la categoría: primeras 3 letras sin acentos (Construcción → CON).</summary>
+        private static string ObtenerPrefijo(Categoria cat)
+        {
+            var sinAcentos = new string(cat.Nombre
+                .Normalize(System.Text.NormalizationForm.FormD)
+                .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)
+                            != System.Globalization.UnicodeCategory.NonSpacingMark)
+                .Where(char.IsLetter)
+                .ToArray());
+
+            return sinAcentos[..Math.Min(3, sinAcentos.Length)].ToUpperInvariant();
+        }
+
+        /// <summary>
+        /// Interpreta precios escritos al estilo argentino ("1.500", "1.500,50", "1500,5")
+        /// y también con punto decimal ("1500.50").
+        /// </summary>
+        private static bool TryParsePrecio(string texto, out decimal precio)
+        {
+            texto = texto.Replace("$", "").Replace(" ", "");
+            var ar = new System.Globalization.CultureInfo("es-AR");
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var estilo = System.Globalization.NumberStyles.Number;
+
+            if (texto.Contains(','))
+                return decimal.TryParse(texto, estilo, ar, out precio);
+
+            // Solo puntos: si tiene forma de miles (1.500 / 12.345.678) son separadores de miles
+            if (System.Text.RegularExpressions.Regex.IsMatch(texto, @"^\d{1,3}(\.\d{3})+$"))
+                return decimal.TryParse(texto.Replace(".", ""), estilo, inv, out precio);
+
+            return decimal.TryParse(texto, estilo, inv, out precio);
+        }
+
         private void ActualizarPreview()
         {
             PrevCodigo.Text = string.IsNullOrWhiteSpace(TxtCodigo.Text)
@@ -161,7 +217,7 @@ namespace ElApostol_WPF.UI.Dueño
 
             TxtVarMedida.Text = variante.Medida ?? string.Empty;
             TxtVarCalidad.Text = variante.Calidad == "—" ? string.Empty : variante.Calidad ?? string.Empty;
-            TxtVarPrecio.Text = variante.PrecioUnitario.ToString("F2");
+            TxtVarPrecio.Text = variante.PrecioUnitario.ToString("0.##", new System.Globalization.CultureInfo("es-AR"));
             TxtVarStock.Text = variante.StockActual.ToString();
 
             _varianteEnEdicion = variante;
@@ -189,16 +245,20 @@ namespace ElApostol_WPF.UI.Dueño
                 return;
             }
 
-            if (!decimal.TryParse(precioTxt.Replace(',', '.'),
-                System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var precio) || precio <= 0)
+            if (!TryParsePrecio(precioTxt, out var precio) || precio <= 0)
             {
-                MostrarError("El precio de la variante debe ser un número positivo.");
+                MostrarError("El precio de la variante debe ser un número positivo.\nEjemplos válidos: 1500 · 1.500 · 1.500,50");
                 TxtVarPrecio.Focus();
                 return;
             }
 
-            int.TryParse(stockTxt, out int stock);
+            int stock = 0;
+            if (stockTxt.Length > 0 && (!int.TryParse(stockTxt, out stock) || stock < 0))
+            {
+                MostrarError("El stock debe ser un número entero mayor o igual a 0.");
+                TxtVarStock.Focus();
+                return;
+            }
 
             if (_varianteEnEdicion != null)
             {
@@ -272,6 +332,15 @@ namespace ElApostol_WPF.UI.Dueño
                     LimpiarCamposVariante();
                 }
 
+                if (variante.Id > 0 && _repo.VarianteTieneVentas(variante.Id))
+                {
+                    MessageBox.Show(
+                        $"La variante \"{variante.Medida}\" tiene ventas registradas y no se puede eliminar sin perder ese historial.\n\n" +
+                        "Si ya no la vendés, podés dejar su stock en 0.",
+                        "No se puede eliminar", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 var r = MessageBox.Show(
                     $"¿Eliminás la variante \"{variante.Medida}\"?",
                     "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -304,11 +373,26 @@ namespace ElApostol_WPF.UI.Dueño
             TxtErrorCategoria.Visibility = Visibility.Collapsed;
             TxtErrorVariantes.Visibility = Visibility.Collapsed;
 
-            if (string.IsNullOrWhiteSpace(TxtCodigo.Text))
+            var codigo = TxtCodigo.Text.Trim().ToUpperInvariant();
+            var cambioCodigo = !_modoEdicion
+                || !string.Equals(codigo, _productoOriginal?.CodigoInterno, StringComparison.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(codigo))
             {
                 TxtErrorCodigo.Text = "El código es obligatorio.";
                 TxtErrorCodigo.Visibility = Visibility.Visible;
                 ok = false;
+            }
+            else if (cambioCodigo && CmbCategoria.SelectedItem is Categoria catSel)
+            {
+                // Formato PRE-000, con el prefijo de la categoría (CON, ELE, PLO…)
+                var prefijo = ObtenerPrefijo(catSel);
+                if (!System.Text.RegularExpressions.Regex.IsMatch(codigo, $@"^{prefijo}-\d{{3,}}$"))
+                {
+                    TxtErrorCodigo.Text = $"El código debe tener el formato {prefijo}-000 (ej: {prefijo}-001).";
+                    TxtErrorCodigo.Visibility = Visibility.Visible;
+                    ok = false;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(TxtNombre.Text))
@@ -350,10 +434,13 @@ namespace ElApostol_WPF.UI.Dueño
 
             if (!Validar()) return;
 
+            var codigo = TxtCodigo.Text.Trim().ToUpperInvariant();
+            if (!VerificarCodigoDisponible(codigo)) return;
+
             var producto = new Producto
             {
                 Id = _productoOriginal?.Id ?? 0,
-                CodigoInterno = TxtCodigo.Text.Trim(),
+                CodigoInterno = codigo,
                 Nombre = TxtNombre.Text.Trim(),
                 Marca = TxtMarca.Text.Trim().NullIfEmpty(),
                 Proveedor = TxtProveedor.Text.Trim().NullIfEmpty(),
@@ -374,15 +461,96 @@ namespace ElApostol_WPF.UI.Dueño
                 DialogResult = true;
                 Close();
             }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number is 2627 or 2601)
+            {
+                // Respaldo por si el código se cargó desde otra PC entre la verificación y el guardado
+                TxtErrorCodigo.Text = $"Ya existe un material con el código {producto.CodigoInterno}.";
+                TxtErrorCodigo.Visibility = Visibility.Visible;
+                RestaurarBotonGuardar();
+            }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 547)
+            {
+                MessageBox.Show(
+                    "No se pudo guardar porque una de las variantes eliminadas tiene ventas registradas.\n" +
+                    "Volvé a agregarla o dejá su stock en 0.",
+                    "No se puede guardar", MessageBoxButton.OK, MessageBoxImage.Warning);
+                RestaurarBotonGuardar();
+            }
             catch (Exception ex)
             {
                 MessageBox.Show(
                     $"Error al guardar:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                BtnGuardar.IsEnabled = true;
-                BtnGuardar.Content = _modoEdicion ? "Guardar cambios" : "Guardar material";
+                RestaurarBotonGuardar();
             }
+        }
+
+        private void RestaurarBotonGuardar()
+        {
+            BtnGuardar.IsEnabled = true;
+            BtnGuardar.Content = _modoEdicion ? "Guardar cambios" : "Guardar material";
+        }
+
+        /// <summary>
+        /// Devuelve true si se puede guardar con este código. Si pertenece a un producto
+        /// desactivado (y estamos dando de alta), ofrece reactivarlo en lugar de duplicarlo.
+        /// </summary>
+        private bool VerificarCodigoDisponible(string codigo)
+        {
+            (int id, string nombre, bool activo)? existente;
+            try
+            {
+                existente = _repo.ObtenerPorCodigo(codigo);
+            }
+            catch
+            {
+                return true; // si falla la consulta, el guardado lo valida igual
+            }
+
+            if (existente == null || existente.Value.id == (_productoOriginal?.Id ?? 0))
+                return true;
+
+            var (id, nombre, activo) = existente.Value;
+
+            if (activo || _modoEdicion)
+            {
+                TxtErrorCodigo.Text = activo
+                    ? $"El código {codigo} ya lo usa \"{nombre}\"."
+                    : $"El código {codigo} ya lo usa \"{nombre}\" (desactivado).";
+                TxtErrorCodigo.Visibility = Visibility.Visible;
+                TxtCodigo.Focus();
+                return false;
+            }
+
+            var res = MessageBox.Show(
+                $"El código {codigo} pertenece a \"{nombre}\", que está desactivado.\n\n" +
+                "¿Querés reactivarlo? Vuelve con el stock y precios que tenía (los datos cargados en este formulario no se guardan).\n\n" +
+                "Elegí \"No\" para usar otro código.",
+                "Producto desactivado", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (res == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    _repo.ReactivarProducto(id);
+                    MessageBox.Show($"\"{nombre}\" fue reactivado. Podés editarlo desde el inventario.",
+                        "Producto reactivado", MessageBoxButton.OK, MessageBoxImage.Information);
+                    DialogResult = true;
+                    Close();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al reactivar:\n{ex.Message}",
+                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            else
+            {
+                TxtCodigo.Focus();
+                TxtCodigo.SelectAll();
+            }
+
+            return false;
         }
 
         private void BtnCancelar_Click(object sender, RoutedEventArgs e)

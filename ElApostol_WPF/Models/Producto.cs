@@ -9,6 +9,7 @@
         public int CategoriaId { get; set; }
         public string? NombreCategoria { get; set; } 
         public string? Proveedor { get; set; }
+        public bool Activo { get; set; } = true;
         public List<VarianteProducto> Variantes { get; set; } = new();
     }
 }

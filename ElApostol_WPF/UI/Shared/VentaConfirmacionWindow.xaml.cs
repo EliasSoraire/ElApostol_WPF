@@ -15,15 +15,21 @@ namespace ElApostol_WPF.UI.Shared
         private readonly string _nombreEmpleado;
         private List<CarritoItem> _items = new();
         private decimal _recargoPorc;
+        private readonly Func<Venta, int> _guardarVenta;
+
+        /// <summary>True si la venta se registró en la base (aunque luego se cierre con la X).</summary>
+        public bool VentaGuardada { get; private set; }
 
         public VentaConfirmacionWindow(Venta venta, string nombreEmpleado,
-                                       List<CarritoItem> items, decimal recargoPorc)
+                                       List<CarritoItem> items, decimal recargoPorc,
+                                       Func<Venta, int> guardarVenta)
         {
             InitializeComponent();
             _venta = venta;
             _nombreEmpleado = nombreEmpleado;
             _items = items;
             _recargoPorc = recargoPorc;
+            _guardarVenta = guardarVenta;
             CargarDatos(items, recargoPorc);
         }
 
@@ -72,8 +78,42 @@ namespace ElApostol_WPF.UI.Shared
 
         private void BtnConfirmar_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = true;
-            Close();
+            if (VentaGuardada)
+            {
+                DialogResult = true;
+                Close();
+                return;
+            }
+
+            try
+            {
+                BtnConfirmar.IsEnabled = false;
+                _venta.Id = _guardarVenta(_venta);
+                VentaGuardada = true;
+            }
+            catch (Data.StockInsuficienteException ex)
+            {
+                MessageBox.Show(ex.Message, "Stock insuficiente",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                DialogResult = false;
+                Close();
+                return;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al registrar la venta:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                BtnConfirmar.IsEnabled = true;
+                return;
+            }
+
+            // Venta registrada: se habilita el PDF y solo queda cerrar
+            TxtTituloConfirmacion.Text = "Venta registrada ✓";
+            BtnCancelar.Visibility = Visibility.Collapsed;
+            BtnConfirmar.Content = "Cerrar";
+            BtnConfirmar.IsEnabled = true;
+            BtnPdf.IsEnabled = true;
+            BtnPdf.ToolTip = null;
         }
 
         private void BtnCancelar_Click(object sender, RoutedEventArgs e)

@@ -48,7 +48,9 @@ namespace ElApostol_WPF.UI.Login
                 BtnRolDueno.BorderBrush = verde;
                 TxtRolDueno.Foreground = verdeTxt;
 
+                BtnRolEmpleado.Background = grisLight;
                 BtnRolEmpleado.BorderBrush = grisBorder;
+                TxtRolEmpleado.Foreground = grisTxt;
             }
             else
             {
@@ -57,7 +59,9 @@ namespace ElApostol_WPF.UI.Login
                 TxtRolEmpleado.Foreground = verdeTxt;
                 IconEmpleado.Background = verde;
 
+                BtnRolDueno.Background = grisLight;
                 BtnRolDueno.BorderBrush = grisBorder;
+                TxtRolDueno.Foreground = grisTxt;
             }
 
             LinkOlvide.IsEnabled = rol == "dueño";

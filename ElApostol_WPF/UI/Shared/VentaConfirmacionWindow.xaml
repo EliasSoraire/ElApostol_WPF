@@ -114,7 +114,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0"
+                <TextBlock x:Name="TxtTituloConfirmacion" Grid.Column="0"
                            Text="Confirmar venta"
                            FontSize="15" FontWeight="Medium" Foreground="White"
                            VerticalAlignment="Center"/>
@@ -296,9 +296,12 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Guardar PDF -->
-                <Button Grid.Column="0"
+                <Button x:Name="BtnPdf" Grid.Column="0"
                         Style="{StaticResource BtnVerdeSoft}"
                         Padding="11,7"
+                        IsEnabled="False"
+                        ToolTipService.ShowOnDisabled="True"
+                        ToolTip="Disponible una vez confirmada la venta"
                         Click="BtnPdf_Click">
                     <StackPanel Orientation="Horizontal">
                         <Path Data="M8,2 V10 M5,7 L8,10 L11,7 M2,12 H14"
@@ -313,12 +316,12 @@
 
                 <!-- Cancelar + Confirmar -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Content="Cancelar"
+                    <Button x:Name="BtnCancelar" Content="Cancelar"
                             Style="{StaticResource BtnRojo}"
                             Padding="14,8" Margin="0,0,8,0"
                             FontSize="13"
                             Click="BtnCancelar_Click"/>
-                    <Button Content="Confirmar venta"
+                    <Button x:Name="BtnConfirmar" Content="Confirmar venta"
                             Style="{StaticResource BtnVerde}"
                             Padding="18,8" FontSize="13"
                             Click="BtnConfirmar_Click"/>

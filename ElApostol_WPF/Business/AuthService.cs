@@ -17,7 +17,9 @@ namespace ElApostol_WPF.Business
                 return null;
 
             _repo.ActualizarUltimoLogin(usuario.Id);
-            return usuario;
+
+            // Releer para obtener la hora_inicio_sesion recién guardada (la anterior es de la sesión previa)
+            return _repo.ObtenerPorId(usuario.Id) ?? usuario;
         }
 
         public bool CambiarContrasena(int usuarioId, string nuevaContrasena, bool esTemporal = false)

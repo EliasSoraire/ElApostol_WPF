@@ -5,7 +5,7 @@ namespace ElApostol_WPF.Data
     public class ConexionDB
     {
         private static readonly string _connectionString =
-            @"Server=DESKTOP-ULP390Q;Database=ElApostol;Trusted_Connection=True;TrustServerCertificate=True;";
+            @"Server=(localdb)\MSSQLLocalDB;Database=ElApostol;Trusted_Connection=True;TrustServerCertificate=True;";
 
         public static SqlConnection ObtenerConexion()
         {

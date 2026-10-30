@@ -35,6 +35,61 @@ namespace ElApostol_WPF.UI.Dueño
             CargarCategorias();
             CargarMetricas();
             CargarProductos();
+
+            CtrlNuevaVenta.SalirSolicitado += CtrlNuevaVenta_SalirSolicitado;
+        }
+
+        private void OcultarTodosLosPaneles()
+        {
+            PanelInventario.Visibility = Visibility.Collapsed;
+            CtrlNuevaVenta.Visibility = Visibility.Collapsed;
+            CtrlGestionEmpleados.Visibility = Visibility.Collapsed;
+            CtrlReporteVentas.Visibility = Visibility.Collapsed;
+
+            var inactivo = (Style)FindResource("SbBtn");
+            BtnInventario.Style = inactivo;
+            BtnNuevaVenta.Style = inactivo;
+            BtnReporteVentas.Style = inactivo;
+            BtnGestionEmpleados.Style = inactivo;
+        }
+
+        private void MostrarInventario()
+        {
+            OcultarTodosLosPaneles();
+            PanelInventario.Visibility = Visibility.Visible;
+            BtnInventario.Style = (Style)FindResource("SbBtnActive");
+            CargarMetricas();
+            CargarProductos();
+        }
+
+        public void MostrarNuevaVenta()
+        {
+            OcultarTodosLosPaneles();
+            CtrlNuevaVenta.Visibility = Visibility.Visible;
+            BtnNuevaVenta.Style = (Style)FindResource("SbBtnActive");
+            CtrlNuevaVenta.Inicializar(_usuario);
+        }
+
+        private void MostrarGestionEmpleados()
+        {
+            OcultarTodosLosPaneles();
+            CtrlGestionEmpleados.Visibility = Visibility.Visible;
+            BtnGestionEmpleados.Style = (Style)FindResource("SbBtnActive");
+            CtrlGestionEmpleados.Inicializar(_usuario);
+        }
+
+        private void MostrarReporteVentas()
+        {
+            OcultarTodosLosPaneles();
+            CtrlReporteVentas.Visibility = Visibility.Visible;
+            BtnReporteVentas.Style = (Style)FindResource("SbBtnActive");
+            CtrlReporteVentas.Inicializar(_usuario);
+        }
+
+        private void CtrlNuevaVenta_SalirSolicitado(object? sender, EventArgs e)
+        {
+            _paginaActual = 1;
+            MostrarInventario();
         }
 
         private void CargarMetricas()
@@ -64,8 +119,10 @@ namespace ElApostol_WPF.UI.Dueño
             var catItem = CmbCategoria.SelectedItem as ComboBoxItem;
             var categoriaId = catItem?.Tag as int?;
 
+            var soloInactivos = ChkVerInactivos?.IsChecked == true;
+
             var productos = _repo.ObtenerPaginado(
-                busqueda, categoriaId, _paginaActual, PorPagina, out _totalRegistros);
+                busqueda, categoriaId, _paginaActual, PorPagina, out _totalRegistros, soloInactivos);
 
             DgProductos.ItemsSource = productos.Select(p => new ProductoRow(p)).ToList();
 
@@ -174,6 +231,42 @@ namespace ElApostol_WPF.UI.Dueño
             CargarProductos();
         }
 
+        private void ChkVerInactivos_Changed(object sender, RoutedEventArgs e)
+        {
+            _paginaActual = 1;
+            CargarProductos();
+        }
+
+        private void BtnReactivar_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn || btn.Tag is not int id) return;
+
+            var producto = _repo.ObtenerPorId(id);
+            if (producto == null) return;
+
+            var res = MessageBox.Show(
+                $"¿Reactivar \"{producto.Nombre}\" ({producto.CodigoInterno})?\n\n" +
+                "Va a volver a aparecer en el inventario y en nuevas ventas, con el stock y precios que tenía.",
+                "Reactivar producto", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (res != MessageBoxResult.Yes) return;
+
+            try
+            {
+                _repo.ReactivarProducto(id);
+                MessageBox.Show($"\"{producto.Nombre}\" fue reactivado.",
+                    "Producto reactivado", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al reactivar:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+            CargarMetricas();
+            CargarProductos();
+        }
+
         private void BtnEditar_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is int id)
@@ -191,11 +284,49 @@ namespace ElApostol_WPF.UI.Dueño
             }
         }
 
+        private void BtnEliminar_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn || btn.Tag is not int id) return;
+
+            var producto = _repo.ObtenerPorId(id);
+            if (producto == null) return;
+
+            if (_repo.TieneVentasAsociadas(id))
+            {
+                var res = MessageBox.Show(
+                    $"\"{producto.Nombre}\" tiene ventas registradas, así que no se puede eliminar sin perder ese historial.\n\n" +
+                    "¿Querés desactivarlo en su lugar? Va a dejar de aparecer en el inventario y en nuevas ventas, pero sus ventas anteriores se mantienen intactas.",
+                    "No se puede eliminar",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (res != MessageBoxResult.Yes) return;
+
+                _repo.DesactivarProducto(id);
+                MessageBox.Show($"\"{producto.Nombre}\" fue desactivado.",
+                    "Producto desactivado", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                var confirmar = MessageBox.Show(
+                    $"¿Eliminar \"{producto.Nombre}\" y todas sus variantes? Esta acción no se puede deshacer.",
+                    "Confirmar eliminación",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (confirmar != MessageBoxResult.Yes) return;
+
+                _repo.EliminarProducto(id);
+            }
+
+            CargarMetricas();
+            CargarProductos();
+        }
+
         private void BtnInventario_Click(object sender, RoutedEventArgs e)
         {
             _paginaActual = 1;
-            CargarMetricas();
-            CargarProductos();
+            MostrarInventario();
         }
 
         private void BtnAgregarMaterial_Click(object sender, RoutedEventArgs e)
@@ -209,38 +340,17 @@ namespace ElApostol_WPF.UI.Dueño
             }
         }
 
-        private void BtnNuevaVenta_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new ElApostol_WPF.UI.Shared.NuevaVentaWindow(_usuario);
-            this.Hide();
-            ventana.Closed += (s, args) =>
-            {
-                this.Show();
-            };
-            if (ventana.ShowDialog() == true)
-            {
-                CargarMetricas();
-            }
-        }
+        private void BtnNuevaVenta_Click(object sender, RoutedEventArgs e) => MostrarNuevaVenta();
 
-        private void BtnReporteVentas_Click(object sender, RoutedEventArgs e)
-        {
-            var w = new ReporteVentasWindow(_usuario);
-            w.Show();
-            Close();
-        }
+        private void BtnReporteVentas_Click(object sender, RoutedEventArgs e) => MostrarReporteVentas();
 
-        private void BtnGestionEmpleados_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new GestionEmpleadosWindow(_usuario);
-            ventana.Show();
-            Close();
-        }
+        private void BtnGestionEmpleados_Click(object sender, RoutedEventArgs e) => MostrarGestionEmpleados();
 
         private void BtnCambiarClaveEmpleado_Click(object sender, RoutedEventArgs e)
         {
-            var ventana = new CambiarContrasenaEmpleadoWindow(_usuario);
-            ventana.Show();
+            // Debe abrirse como diálogo: la ventana usa DialogResult al guardar/cancelar
+            var ventana = new CambiarContrasenaEmpleadoWindow(_usuario) { Owner = this };
+            ventana.ShowDialog();
         }
 
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
@@ -285,19 +395,38 @@ namespace ElApostol_WPF.UI.Dueño
         public string StockDisplay { get; }
         public Brush StockBadgeBg { get; }
         public Brush StockBadgeFg { get; }
+        public Visibility VisibilidadActivo { get; }
+        public Visibility VisibilidadInactivo { get; }
 
         public ProductoRow(Producto p)
         {
-            var v = p.Variantes.FirstOrDefault();
+            // Con varias medidas, el color del badge refleja la variante en peor estado
+            var v = p.Variantes
+                .OrderBy(x => x.StockMinimo == 0 ? double.MaxValue : x.StockActual / (double)x.StockMinimo)
+                .FirstOrDefault();
 
             Id = p.Id;
             CodigoInterno = p.CodigoInterno;
             Nombre = p.Nombre;
             Marca = p.Marca ?? "-";
             NombreCategoria = p.NombreCategoria ?? "-";
-            PrecioDisplay = v != null ? $"${v.PrecioUnitario:N0}" : "-";
-            MedidaDisplay = v?.Medida ?? "-";
-            StockDisplay = v?.StockActual.ToString() ?? "-";
+            VisibilidadActivo = p.Activo ? Visibility.Visible : Visibility.Collapsed;
+            VisibilidadInactivo = p.Activo ? Visibility.Collapsed : Visibility.Visible;
+
+            if (p.Variantes.Count > 1)
+            {
+                var min = p.Variantes.Min(x => x.PrecioUnitario);
+                var max = p.Variantes.Max(x => x.PrecioUnitario);
+                PrecioDisplay = min == max ? $"${min:N0}" : $"${min:N0} – ${max:N0}";
+                MedidaDisplay = $"{p.Variantes.Count} medidas";
+                StockDisplay = p.Variantes.Sum(x => x.StockActual).ToString();
+            }
+            else
+            {
+                PrecioDisplay = v != null ? $"${v.PrecioUnitario:N0}" : "-";
+                MedidaDisplay = v?.Medida ?? "-";
+                StockDisplay = v?.StockActual.ToString() ?? "-";
+            }
 
             if (v == null)
             {

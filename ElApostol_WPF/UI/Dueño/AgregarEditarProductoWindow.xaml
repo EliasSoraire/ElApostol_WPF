@@ -333,7 +333,7 @@
                             <TextBlock Style="{StaticResource FieldLabel}" Text="CATEGORÍA"/>
                             <ComboBox x:Name="CmbCategoria"
                                       Style="{StaticResource ComboStyle}"
-                                      SelectionChanged="Campo_Changed"
+                                      SelectionChanged="CmbCategoria_SelectionChanged"
                                       DisplayMemberPath="Nombre"
                                       SelectedValuePath="Id"/>
                             <TextBlock x:Name="TxtErrorCategoria"

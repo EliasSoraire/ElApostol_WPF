@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using ElApostol_WPF.Data;
 using ElApostol_WPF.Models;
@@ -15,9 +11,9 @@ using ElApostol_WPF.Reports;
 
 namespace ElApostol_WPF.UI.Dueño
 {
-    public partial class ReporteVentasWindow : Window
+    public partial class ReporteVentasControl : UserControl
     {
-        private readonly Usuario _usuario;
+        private Usuario _usuario = null!;
 
         private class FilaDia
         {
@@ -40,9 +36,13 @@ namespace ElApostol_WPF.UI.Dueño
 
         private string _periodo = "semana";
 
-        public ReporteVentasWindow(Usuario usuario)
+        public ReporteVentasControl()
         {
             InitializeComponent();
+        }
+
+        public void Inicializar(Usuario usuario)
+        {
             _usuario = usuario;
             InicializarUI();
             CargarEmpleados();
@@ -51,33 +51,45 @@ namespace ElApostol_WPF.UI.Dueño
 
         private void InicializarUI()
         {
-            TxtNombreUsuario.Text = _usuario.NombreCompleto;
-            var partes = _usuario.NombreCompleto.Split(' ');
-            TxtAvatar.Text = partes.Length >= 2
-                ? $"{partes[0][0]}{partes[1][0]}".ToUpper()
-                : _usuario.NombreCompleto.Substring(0, Math.Min(2, _usuario.NombreCompleto.Length)).ToUpper();
-
-            var hoy = DateTime.Today;
-            DpDesde.SelectedDate = hoy.AddDays(-(int)hoy.DayOfWeek + (int)DayOfWeek.Monday);
-            DpHasta.SelectedDate = hoy;
+            DpDesde.SelectedDate = LunesDeEstaSemana();
+            DpHasta.SelectedDate = DateTime.Today;
         }
+
+        // El domingo pertenece a la semana que empezó el lunes anterior
+        private static DateTime LunesDeEstaSemana() =>
+            DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek + 6) % 7));
+
+        // Ids paralelos a los ítems del combo (índice 0 = "Todos")
+        private readonly List<int?> _empleadoIds = new();
+
+        private int? EmpleadoSeleccionadoId =>
+            CmbEmpleado.SelectedIndex > 0 && CmbEmpleado.SelectedIndex < _empleadoIds.Count
+                ? _empleadoIds[CmbEmpleado.SelectedIndex]
+                : null;
 
         private void CargarEmpleados()
         {
             var empleados = new List<string> { "Todos los empleados" };
+            _empleadoIds.Clear();
+            _empleadoIds.Add(null);
 
             try
             {
                 using var conn = ConexionDB.ObtenerConexion();
                 conn.Open();
+                // Se incluyen inactivos para poder consultar ventas de ex-empleados
                 var cmd = new SqlCommand(
-                    "SELECT nombre_completo FROM usuarios WHERE activo = 1 ORDER BY nombre_completo",
+                    "SELECT id, nombre_completo, usuario, activo FROM usuarios ORDER BY activo DESC, nombre_completo",
                     conn);
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
-                    empleados.Add(r.GetString(0));
+                {
+                    _empleadoIds.Add(r.GetInt32(0));
+                    var inactivo = r.GetBoolean(3) ? "" : " · inactivo";
+                    empleados.Add($"{r.GetString(1)} (@{r.GetString(2)}){inactivo}");
+                }
             }
-            catch {}
+            catch { }
 
             CmbEmpleado.SelectionChanged -= Filtros_Changed;
             CmbEmpleado.ItemsSource = empleados;
@@ -94,16 +106,13 @@ namespace ElApostol_WPF.UI.Dueño
                 "mes" => (new DateTime(hoy.Year, hoy.Month, 1), hoy),
                 "custom" => (DpDesde.SelectedDate ?? hoy.AddDays(-6),
                              DpHasta.SelectedDate ?? hoy),
-                _ => 
-                    (hoy.AddDays(-(int)hoy.DayOfWeek + (int)DayOfWeek.Monday), hoy)
+                _ => (LunesDeEstaSemana(), hoy)
             };
         }
         private void AplicarFiltros()
         {
             var (desde, hasta) = ObtenerRango();
-            var empleadoFiltro = CmbEmpleado.SelectedIndex > 0
-                ? CmbEmpleado.SelectedItem?.ToString()
-                : null;
+            var empleadoFiltro = EmpleadoSeleccionadoId;
 
             _filas = ConsultarVentasPorDia(desde, hasta, empleadoFiltro);
             _pagActual = 1;
@@ -113,7 +122,7 @@ namespace ElApostol_WPF.UI.Dueño
             ActualizarTabla();
             ActualizarSubtitulo(desde, hasta);
         }
-        private List<FilaDia> ConsultarVentasPorDia(DateTime desde, DateTime hasta, string? empleado)
+        private List<FilaDia> ConsultarVentasPorDia(DateTime desde, DateTime hasta, int? empleado)
         {
             var filas = new List<FilaDia>();
             var ci = new CultureInfo("es-AR");
@@ -136,7 +145,7 @@ namespace ElApostol_WPF.UI.Dueño
                             WHERE CAST(v2.fecha_hora AS DATE) = CAST(v.fecha_hora AS DATE)");
 
                 if (empleado != null)
-                    sql.Append(" AND u2.nombre_completo = @emp");
+                    sql.Append(" AND v2.usuario_id = @emp");
 
                 sql.Append(@"
                             GROUP BY u2.nombre_completo
@@ -147,7 +156,7 @@ namespace ElApostol_WPF.UI.Dueño
                     WHERE CAST(v.fecha_hora AS DATE) BETWEEN @desde AND @hasta");
 
                 if (empleado != null)
-                    sql.Append(" AND u.nombre_completo = @emp");
+                    sql.Append(" AND v.usuario_id = @emp");
 
                 sql.Append(@"
                     GROUP BY CAST(v.fecha_hora AS DATE)
@@ -157,7 +166,7 @@ namespace ElApostol_WPF.UI.Dueño
                 cmd.Parameters.AddWithValue("@desde", desde);
                 cmd.Parameters.AddWithValue("@hasta", hasta);
                 if (empleado != null)
-                    cmd.Parameters.AddWithValue("@emp", empleado);
+                    cmd.Parameters.AddWithValue("@emp", empleado.Value);
 
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
@@ -256,7 +265,7 @@ namespace ElApostol_WPF.UI.Dueño
                 var fila = _filas[i];
                 var pct = (double)(fila.Total / maxTotal);
                 var esHoy = fila.Fecha == hoy;
-                var barH = Math.Max(4, pct * 60); 
+                var barH = Math.Max(4, pct * 60);
 
                 var col = new Grid();
                 col.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -300,7 +309,7 @@ namespace ElApostol_WPF.UI.Dueño
 
             TxtGraficoTitulo.Text = _periodo switch
             {
-                "hoy" => "Ingresos por hora — hoy",
+                "hoy" => "Ingresos — hoy",
                 "mes" => "Ingresos por día — este mes",
                 "custom" => "Ingresos por día — período seleccionado",
                 _ => "Ingresos por día — semana actual"
@@ -392,31 +401,60 @@ namespace ElApostol_WPF.UI.Dueño
                 lineas.AppendLine($"Ventas del {fecha:dd/MM/yyyy}");
                 lineas.AppendLine(new string('─', 50));
 
+                var empleadoId = EmpleadoSeleccionadoId;
+
                 using var conn = ConexionDB.ObtenerConexion();
                 conn.Open();
-                var cmd = new SqlCommand(@"
-                    SELECT v.numero_comprobante,
+                var cmd = new SqlCommand($@"
+                    SELECT v.id,
+                           v.numero_comprobante,
                            v.fecha_hora,
                            u.nombre_completo,
                            v.metodo_pago,
-                           v.total
+                           v.total,
+                           p.nombre,
+                           vp.medida,
+                           dv.cantidad,
+                           dv.subtotal_linea
                     FROM ventas v
                     INNER JOIN usuarios u ON u.id = v.usuario_id
+                    LEFT JOIN detalle_ventas     dv ON dv.venta_id = v.id
+                    LEFT JOIN variantes_producto vp ON vp.id = dv.variante_id
+                    LEFT JOIN productos          p  ON p.id  = vp.producto_id
                     WHERE CAST(v.fecha_hora AS DATE) = @fecha
-                    ORDER BY v.fecha_hora", conn);
+                    {(empleadoId != null ? "AND v.usuario_id = @emp" : "")}
+                    ORDER BY v.fecha_hora, v.id, dv.id", conn);
                 cmd.Parameters.AddWithValue("@fecha", fecha);
+                if (empleadoId != null)
+                    cmd.Parameters.AddWithValue("@emp", empleadoId.Value);
 
                 using var r = cmd.ExecuteReader();
                 int count = 0;
+                int ventaActual = -1;
                 while (r.Read())
                 {
-                    count++;
-                    var nro = r.GetString(0);
-                    var hora = r.GetDateTime(1).ToString("HH:mm");
-                    var emp = r.GetString(2);
-                    var metodo = r.GetString(3);
-                    var total = r.GetDecimal(4).ToString("C0", ci);
-                    lineas.AppendLine($"{nro}  {hora}  {emp}  [{metodo}]  {total}");
+                    var ventaId = r.GetInt32(0);
+                    if (ventaId != ventaActual)
+                    {
+                        if (count > 0) lineas.AppendLine();
+                        count++;
+                        ventaActual = ventaId;
+
+                        var nro = r.GetString(1);
+                        var hora = r.GetDateTime(2).ToString("HH:mm");
+                        var emp = r.GetString(3);
+                        var metodo = r.GetString(4);
+                        var total = r.GetDecimal(5).ToString("C0", ci);
+                        lineas.AppendLine($"{nro}  {hora}  {emp}  [{metodo}]  {total}");
+                    }
+
+                    if (!r.IsDBNull(6))
+                    {
+                        var medida = r.IsDBNull(7) ? "" : $" ({r.GetString(7)})";
+                        var cant = r.GetInt32(8);
+                        var sub = r.GetDecimal(9).ToString("C0", ci);
+                        lineas.AppendLine($"    {cant} × {r.GetString(6)}{medida}  —  {sub}");
+                    }
                 }
 
                 if (count == 0)
@@ -456,20 +494,24 @@ namespace ElApostol_WPF.UI.Dueño
                 var ci = new CultureInfo("es-AR");
 
                 decimal efectivo = 0, tarjeta = 0, transferencia = 0;
+                var empleadoFiltro = EmpleadoSeleccionadoId;
 
                 try
                 {
                     using var conn = ConexionDB.ObtenerConexion();
                     conn.Open();
 
-                    var cmd = new SqlCommand(@"
+                    var cmd = new SqlCommand($@"
                 SELECT metodo_pago, ISNULL(SUM(total), 0)
                 FROM ventas
                 WHERE CAST(fecha_hora AS DATE) BETWEEN @desde AND @hasta
+                {(empleadoFiltro != null ? "AND usuario_id = @emp" : "")}
                 GROUP BY metodo_pago", conn);
 
                     cmd.Parameters.AddWithValue("@desde", desde);
                     cmd.Parameters.AddWithValue("@hasta", hasta);
+                    if (empleadoFiltro != null)
+                        cmd.Parameters.AddWithValue("@emp", empleadoFiltro.Value);
 
                     using var r = cmd.ExecuteReader();
                     while (r.Read())
@@ -483,6 +525,45 @@ namespace ElApostol_WPF.UI.Dueño
                             case "tarjeta": tarjeta += monto; break;
                             case "transferencia": transferencia += monto; break;
                         }
+                    }
+                }
+                catch { }
+
+                var ventasDetalle = new List<Reports.VentaDetalleDto>();
+
+                try
+                {
+                    using var conn = ConexionDB.ObtenerConexion();
+                    conn.Open();
+
+                    var sqlDetalle = new StringBuilder(@"
+                        SELECT v.numero_comprobante, v.fecha_hora, u.nombre_completo, v.metodo_pago, v.total
+                        FROM ventas v
+                        INNER JOIN usuarios u ON u.id = v.usuario_id
+                        WHERE CAST(v.fecha_hora AS DATE) BETWEEN @desde AND @hasta");
+
+                    if (empleadoFiltro != null)
+                        sqlDetalle.Append(" AND v.usuario_id = @emp");
+
+                    sqlDetalle.Append(" ORDER BY v.fecha_hora DESC");
+
+                    var cmdDetalle = new SqlCommand(sqlDetalle.ToString(), conn);
+                    cmdDetalle.Parameters.AddWithValue("@desde", desde);
+                    cmdDetalle.Parameters.AddWithValue("@hasta", hasta);
+                    if (empleadoFiltro != null)
+                        cmdDetalle.Parameters.AddWithValue("@emp", empleadoFiltro.Value);
+
+                    using var rDetalle = cmdDetalle.ExecuteReader();
+                    while (rDetalle.Read())
+                    {
+                        ventasDetalle.Add(new Reports.VentaDetalleDto
+                        {
+                            NumeroComprobante = rDetalle.GetString(0),
+                            FechaHora = rDetalle.GetDateTime(1),
+                            Empleado = rDetalle.GetString(2),
+                            MetodoPago = rDetalle.GetString(3),
+                            Total = rDetalle.GetDecimal(4),
+                        });
                     }
                 }
                 catch { }
@@ -513,7 +594,8 @@ namespace ElApostol_WPF.UI.Dueño
                         TicketPromedio = f.CantidadVentas > 0 ? f.Total / f.CantidadVentas : 0m,
                         Empleado = f.Empleado,
                         EsMejorDia = f.EsMejorDia,
-                    }).ToList()
+                    }).ToList(),
+                    Ventas = ventasDetalle
                 };
 
                 Reports.ReporteVentasPdf.Generate(ruta, data);
@@ -537,70 +619,6 @@ namespace ElApostol_WPF.UI.Dueño
             {
                 MessageBox.Show($"Error al exportar el PDF:\n{ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-
-        private void BtnInventario_Click(object sender, RoutedEventArgs e)
-        {
-            var w = new MenuDuenoWindow(_usuario);
-            w.Show();
-            Close();
-        }
-
-        private void BtnAgregarMaterial_Click(object sender, RoutedEventArgs e)
-        {
-            var w = new ElApostol_WPF.UI.Dueño.AgregarEditarProductoWindow();
-            w.Show();
-        }
-
-        private void BtnNuevaVenta_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new ElApostol_WPF.UI.Shared.NuevaVentaWindow(_usuario);
-            this.Hide();
-
-            ventana.Closed += (s, args) =>
-            {
-                this.Show();
-            };
-
-            ventana.ShowDialog();
-        }
-
-        private void BtnGestionEmpleados_Click(object sender, RoutedEventArgs e)
-        {
-            var w = new ElApostol_WPF.UI.Dueño.GestionEmpleadosWindow(_usuario);
-            w.Show();
-            Close();
-        }
-
-        private void BtnCambiarClaveEmpleado_Click(object sender, RoutedEventArgs e)
-        {
-            var w = new ElApostol_WPF.UI.Dueño.CambiarContrasenaEmpleadoWindow(_usuario);
-            w.Show();
-        }
-
-        private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
-        {
-            var res = MessageBox.Show("¿Cerrar sesión?", "El Apóstol",
-                MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (res != MessageBoxResult.Yes) return;
-
-            var login = new ElApostol_WPF.UI.Login.LoginWindow();
-            login.Show();
-            Close();
-        }
-        
-        private void Window_KeyDown(object sender, KeyEventArgs e)
-        {
-            switch (e.Key)
-            {
-                case Key.F1: BtnInventario_Click(sender, e); break;
-                case Key.F2: BtnAgregarMaterial_Click(sender, e); break;
-                case Key.F3: BtnNuevaVenta_Click(sender, e); break;
-                case Key.F5: BtnGestionEmpleados_Click(sender, e); break;
-                case Key.F6: BtnCambiarClaveEmpleado_Click(sender, e); break;
-                case Key.F12: BtnCerrarSesion_Click(sender, e); break;
             }
         }
     }

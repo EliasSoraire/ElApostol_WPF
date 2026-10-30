@@ -23,7 +23,8 @@ namespace ElApostol_WPF.Data
                 FROM productos p
                 LEFT JOIN categorias c ON c.id = p.categoria_id
                 LEFT JOIN variantes_producto v ON v.producto_id = p.id
-                WHERE (p.nombre LIKE @q OR p.codigo_interno LIKE @q)
+                WHERE p.activo = 1
+                  AND (p.nombre LIKE @q OR p.codigo_interno LIKE @q)
                   AND v.stock_actual > 0
                 ORDER BY p.nombre, v.medida", conn);
 
@@ -132,11 +133,16 @@ namespace ElApostol_WPF.Data
                     var cmdS = new SqlCommand(@"
                         UPDATE variantes_producto
                         SET stock_actual = stock_actual - @cant
-                        WHERE id = @varid", conn, tx);
+                        WHERE id = @varid AND stock_actual >= @cant", conn, tx);
 
                     cmdS.Parameters.AddWithValue("@cant", d.Cantidad);
                     cmdS.Parameters.AddWithValue("@varid", d.VarianteId);
-                    cmdS.ExecuteNonQuery();
+
+                    // Si no se actualizó ninguna fila, otra venta dejó el stock por debajo de lo pedido
+                    if (cmdS.ExecuteNonQuery() == 0)
+                        throw new StockInsuficienteException(
+                            $"No hay stock suficiente de \"{d.NombreProducto ?? "un producto"}\" para vender {d.Cantidad} unidad(es).\n" +
+                            "Es posible que se haya vendido mientras cargabas la venta.");
                 }
 
                 tx.Commit();
@@ -248,7 +254,7 @@ namespace ElApostol_WPF.Data
             v.fecha_hora,
             v.metodo_pago,
             v.total,
-            COUNT(dv.id) AS cantidad_items,
+            ISNULL(SUM(dv.cantidad), 0) AS cantidad_items,
             (
                 SELECT TOP 1 p.nombre
                 FROM detalle_ventas dv2
@@ -296,5 +302,46 @@ namespace ElApostol_WPF.Data
             return lista;
         }
 
+        public List<DetalleVenta> ObtenerDetallesVenta(int ventaId)
+        {
+            var lista = new List<DetalleVenta>();
+
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var cmd = new SqlCommand(@"
+                SELECT dv.id, dv.variante_id, p.nombre, vp.medida,
+                       dv.cantidad, dv.precio_unitario_historico, dv.subtotal_linea
+                FROM detalle_ventas dv
+                JOIN variantes_producto vp ON vp.id = dv.variante_id
+                JOIN productos          p  ON p.id  = vp.producto_id
+                WHERE dv.venta_id = @vid
+                ORDER BY dv.id", conn);
+            cmd.Parameters.AddWithValue("@vid", ventaId);
+
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                lista.Add(new DetalleVenta
+                {
+                    Id = r.GetInt32(0),
+                    VentaId = ventaId,
+                    VarianteId = r.GetInt32(1),
+                    NombreProducto = r.GetString(2),
+                    Medida = r.IsDBNull(3) ? null : r.GetString(3),
+                    Cantidad = r.GetInt32(4),
+                    PrecioUnitarioHistorico = r.GetDecimal(5),
+                    SubtotalLinea = r.GetDecimal(6),
+                });
+            }
+
+            return lista;
+        }
+
+    }
+
+    public class StockInsuficienteException : Exception
+    {
+        public StockInsuficienteException(string mensaje) : base(mensaje) { }
     }
 }

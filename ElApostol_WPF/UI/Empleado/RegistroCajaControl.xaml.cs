@@ -1,23 +1,19 @@
-﻿using ElApostol_WPF.Data;
+using ElApostol_WPF.Data;
 using ElApostol_WPF.Models;
-using ElApostol_WPF.UI.Dueño;
-using ElApostol_WPF.UI.Shared;
 using System.Collections.ObjectModel;
 using System.Windows;
-using System.Windows.Threading;
+using System.Windows.Controls;
 
 namespace ElApostol_WPF.UI.Empleado
 {
-    public partial class RegistroCajaWindow : Window
+    public partial class RegistroCajaControl : UserControl
     {
-        private readonly Usuario _usuario;
+        private Usuario _usuario = null!;
         private readonly VentaRepository _ventaRepo = new();
-        private readonly ProductoRepository _productoRepo = new();
 
         private readonly ObservableCollection<VentaCajaVM> _ventas = new();
-        private readonly DispatcherTimer _relojTimer = new();
 
-        private string _periodoActual = "hoy";        
+        private string _periodoActual = "hoy";
         private DateTime? _fechaPersonalizada = null;
 
         private int _paginaActual = 1;
@@ -25,44 +21,25 @@ namespace ElApostol_WPF.UI.Empleado
         private int _totalRegistros = 0;
         private List<VentaCajaVM> _todasLasVentas = new();
 
-
-        public RegistroCajaWindow(Usuario usuario)
+        public RegistroCajaControl()
         {
             InitializeComponent();
-            _usuario = usuario;
-
-            InicializarUI();
-            InicializarReloj();
-            CargarDatos();
+            DgVentas.ItemsSource = _ventas;
         }
 
-        private void InicializarUI()
+        public void Inicializar(Usuario usuario)
         {
-            var partes = _usuario.NombreCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            TxtAvatar.Text = partes.Length >= 2
-                ? $"{partes[0][0]}{partes[1][0]}".ToUpper()
-                : _usuario.NombreCompleto[..Math.Min(2, _usuario.NombreCompleto.Length)].ToUpper();
-
-            TxtSbNombre.Text = _usuario.NombreCompleto;
-            TxtTurnoDesde.Text = $"Ingresaste a las {_usuario.HoraInicioSesion:HH:mm} hs";
-            
-            DgVentas.ItemsSource = _ventas;
+            _usuario = usuario;
+            _periodoActual = "hoy";
+            _fechaPersonalizada = null;
+            MarcarPeriodo("hoy");
 
             DpFecha.SelectedDateChanged -= DpFecha_SelectedDateChanged;
             DpFecha.SelectedDate = DateTime.Today;
             DpFecha.SelectedDateChanged += DpFecha_SelectedDateChanged;
-        }
 
-        private void InicializarReloj()
-        {
-            ActualizarReloj();
-            _relojTimer.Interval = TimeSpan.FromSeconds(30);
-            _relojTimer.Tick += (_, _) => ActualizarReloj();
-            _relojTimer.Start();
+            CargarDatos();
         }
-
-        private void ActualizarReloj() =>
-            TxtReloj.Text = DateTime.Now.ToString("HH:mm");
 
         private void CargarDatos()
         {
@@ -89,7 +66,8 @@ namespace ElApostol_WPF.UI.Empleado
             {
                 "hoy" => (DateTime.Today, DateTime.Today.AddDays(1).AddTicks(-1)),
                 "ayer" => (DateTime.Today.AddDays(-1), DateTime.Today.AddTicks(-1)),
-                "semana" => (DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek + 1),
+                // Lunes de la semana actual (el domingo pertenece a la semana que empezó el lunes anterior)
+                "semana" => (DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek + 6) % 7)),
                              DateTime.Today.AddDays(1).AddTicks(-1)),
                 "fecha" => (_fechaPersonalizada!.Value,
                              _fechaPersonalizada!.Value.AddDays(1).AddTicks(-1)),
@@ -176,14 +154,13 @@ namespace ElApostol_WPF.UI.Empleado
 
         private void BtnPeriodo_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not System.Windows.Controls.Button btn) return;
+            if (sender is not Button btn) return;
             var tag = btn.Tag?.ToString() ?? "hoy";
             MarcarPeriodo(tag);
             CargarDatos();
         }
 
-        private void DpFecha_SelectedDateChanged(object? sender,
-            System.Windows.Controls.SelectionChangedEventArgs e)
+        private void DpFecha_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (DpFecha.SelectedDate is DateTime fecha)
             {
@@ -210,70 +187,43 @@ namespace ElApostol_WPF.UI.Empleado
 
         private void BtnVerDetalle_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not System.Windows.Controls.Button btn) return;
+            if (sender is not Button btn) return;
             if (btn.Tag is not int ventaId) return;
 
             var vm = _todasLasVentas.FirstOrDefault(v => v.VentaId == ventaId);
             if (vm == null) return;
 
-            MessageBox.Show(
-                $"Comprobante: {vm.NumeroComprobante}\n" +
-                $"Fecha: {vm.FechaHora:dd/MM/yyyy HH:mm}\n" +
-                $"Método: {vm.MetodoPagoDisplay}\n" +
-                $"Total: {vm.TotalDisplay}\n" +
-                $"Ítems: {vm.CantidadItems}",
-                "Detalle de venta",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-        }
+            var texto = new System.Text.StringBuilder();
+            texto.AppendLine($"Comprobante: {vm.NumeroComprobante}");
+            texto.AppendLine($"Fecha: {vm.FechaHora:dd/MM/yyyy HH:mm}");
+            texto.AppendLine($"Método: {vm.MetodoPagoDisplay}");
+            texto.AppendLine();
 
-        private void BtnSbNuevaVenta_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new NuevaVentaWindow(_usuario);
-            ventana.Owner = this;
-            ventana.ShowDialog();
-            CargarDatos();
-        }
-
-        private void BtnSbInventario_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new MenuEmpleadoWindow(_usuario);
-            this.Hide();
-            ventana.Closed += (s, args) =>
+            try
             {
-                this.Show();
-            };
-            if (ventana.ShowDialog() == true)
-            {
+                foreach (var d in _ventaRepo.ObtenerDetallesVenta(ventaId))
+                {
+                    var medida = string.IsNullOrEmpty(d.Medida) ? "" : $" ({d.Medida})";
+                    texto.AppendLine($"{d.Cantidad} × {d.NombreProducto}{medida}  —  ${d.PrecioUnitarioHistorico:N0} c/u  =  ${d.SubtotalLinea:N0}");
+                }
             }
+            catch (Exception ex)
+            {
+                texto.AppendLine($"(No se pudo cargar el detalle: {ex.Message})");
+            }
+
+            texto.AppendLine();
+            texto.AppendLine($"Unidades: {vm.CantidadItems}");
+            texto.Append($"Total: {vm.TotalDisplay}");
+
+            MessageBox.Show(texto.ToString(), "Detalle de venta",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BtnExportar_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("La exportación a PDF estará disponible próximamente.",
                             "Exportar", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
-        {
-            var confirmar = MessageBox.Show(
-                "¿Estás seguro de que querés cerrar tu sesión?",
-                "Cerrar sesión",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (confirmar == MessageBoxResult.Yes)
-            {
-                _relojTimer.Stop();
-                DialogResult = true;
-                Close();
-            }
-        }
-
-        protected override void OnClosed(EventArgs e)
-        {
-            _relojTimer.Stop();
-            base.OnClosed(e);
         }
     }
 

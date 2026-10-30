@@ -7,7 +7,8 @@ namespace ElApostol_WPF.Data
     {
         public List<Producto> ObtenerPaginado(string busqueda, int? categoriaId,
                                                int pagina, int porPagina,
-                                               out int totalRegistros)
+                                               out int totalRegistros,
+                                               bool soloInactivos = false)
         {
             var lista = new List<Producto>();
             totalRegistros = 0;
@@ -15,7 +16,7 @@ namespace ElApostol_WPF.Data
             using var conn = ConexionDB.ObtenerConexion();
             conn.Open();
 
-            var where = "WHERE 1=1";
+            var where = soloInactivos ? "WHERE p.activo = 0" : "WHERE p.activo = 1";
             if (!string.IsNullOrWhiteSpace(busqueda))
                 where += " AND (p.nombre LIKE @busqueda OR p.codigo_interno LIKE @busqueda OR c.nombre LIKE @busqueda)";
             if (categoriaId.HasValue)
@@ -32,17 +33,24 @@ namespace ElApostol_WPF.Data
 
             var offset = (pagina - 1) * porPagina;
             var cmdData = new SqlCommand($@"
+                ;WITH ProductosPagina AS (
+                    SELECT p.id
+                    FROM productos p
+                    LEFT JOIN categorias c ON c.id = p.categoria_id
+                    {where}
+                    ORDER BY p.id
+                    OFFSET @offset ROWS FETCH NEXT @porPagina ROWS ONLY
+                )
                 SELECT p.id, p.codigo_interno, p.nombre, p.marca,
                        p.categoria_id, c.nombre AS nombre_categoria,
-                       p.proveedor,
+                       p.proveedor, p.activo,
                        v.id AS var_id, v.medida, v.calidad,
                        v.precio_unitario, v.stock_actual, v.stock_minimo
                 FROM productos p
+                INNER JOIN ProductosPagina pp ON pp.id = p.id
                 LEFT JOIN categorias c ON c.id = p.categoria_id
                 LEFT JOIN variantes_producto v ON v.producto_id = p.id
-                {where}
-                ORDER BY p.id
-                OFFSET @offset ROWS FETCH NEXT @porPagina ROWS ONLY", conn);
+                ORDER BY p.id", conn);
 
             AgregarParametrosBusqueda(cmdData, busqueda, categoriaId);
             cmdData.Parameters.AddWithValue("@offset", offset);
@@ -65,6 +73,7 @@ namespace ElApostol_WPF.Data
                         CategoriaId = reader.IsDBNull(reader.GetOrdinal("categoria_id")) ? 0 : reader.GetInt32(reader.GetOrdinal("categoria_id")),
                         NombreCategoria = reader.IsDBNull(reader.GetOrdinal("nombre_categoria")) ? null : reader.GetString(reader.GetOrdinal("nombre_categoria")),
                         Proveedor = reader.IsDBNull(reader.GetOrdinal("proveedor")) ? null : reader.GetString(reader.GetOrdinal("proveedor")),
+                        Activo = reader.GetBoolean(reader.GetOrdinal("activo")),
                     };
                     diccionario[pid] = prod;
                     lista.Add(prod);
@@ -96,7 +105,7 @@ namespace ElApostol_WPF.Data
             var cmd = new SqlCommand(@"
                 SELECT p.id, p.codigo_interno, p.nombre, p.marca,
                        p.categoria_id, c.nombre AS nombre_categoria,
-                       p.proveedor,
+                       p.proveedor, p.activo,
                        v.id AS var_id, v.medida, v.calidad,
                        v.precio_unitario, v.stock_actual, v.stock_minimo
                 FROM productos p
@@ -120,6 +129,7 @@ namespace ElApostol_WPF.Data
                     CategoriaId = r.IsDBNull(r.GetOrdinal("categoria_id")) ? 0 : r.GetInt32(r.GetOrdinal("categoria_id")),
                     NombreCategoria = r.IsDBNull(r.GetOrdinal("nombre_categoria")) ? null : r.GetString(r.GetOrdinal("nombre_categoria")),
                     Proveedor = r.IsDBNull(r.GetOrdinal("proveedor")) ? null : r.GetString(r.GetOrdinal("proveedor")),
+                    Activo = r.GetBoolean(r.GetOrdinal("activo")),
                 };
 
                 if (!r.IsDBNull(r.GetOrdinal("var_id")))
@@ -148,10 +158,11 @@ namespace ElApostol_WPF.Data
             var cmd = new SqlCommand(@"
                 SELECT
                     COUNT(DISTINCT p.id)                                          AS total,
-                    SUM(CASE WHEN v.stock_actual < v.stock_minimo THEN 1 ELSE 0 END) AS criticos,
+                    COUNT(DISTINCT CASE WHEN v.stock_actual < v.stock_minimo THEN p.id END) AS criticos,
                     SUM(v.stock_actual * v.precio_unitario)                       AS valor
                 FROM productos p
-                LEFT JOIN variantes_producto v ON v.producto_id = p.id", conn);
+                LEFT JOIN variantes_producto v ON v.producto_id = p.id
+                WHERE p.activo = 1", conn);
 
             using var r = cmd.ExecuteReader();
             if (!r.Read()) return (0, 0, 0);
@@ -321,6 +332,7 @@ namespace ElApostol_WPF.Data
                     medida          = @medida,
                     calidad         = @calidad,
                     precio_unitario = @precio,
+                    stock_actual    = @stock,
                     stock_minimo    = @smin
                 WHERE id = @id",
                 conn, tx);
@@ -329,6 +341,7 @@ namespace ElApostol_WPF.Data
             cmd.Parameters.AddWithValue("@medida", (object?)v.Medida ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@calidad", (object?)v.Calidad ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@precio", v.PrecioUnitario);
+            cmd.Parameters.AddWithValue("@stock", v.StockActual);
             cmd.Parameters.AddWithValue("@smin", v.StockMinimo);
             cmd.ExecuteNonQuery();
         }
@@ -355,6 +368,7 @@ namespace ElApostol_WPF.Data
                 FROM productos p
                 LEFT JOIN categorias          c ON c.id = p.categoria_id
                 LEFT JOIN variantes_producto  v ON v.producto_id = p.id
+                WHERE p.activo = 1
                 ORDER BY p.nombre, v.medida";
 
             using var conn = ConexionDB.ObtenerConexion();
@@ -444,6 +458,135 @@ namespace ElApostol_WPF.Data
             }
 
             return prod;
+        }
+
+        public bool TieneVentasAsociadas(int productoId)
+        {
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var cmd = new SqlCommand(@"
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM detalle_ventas dv
+                    INNER JOIN variantes_producto v ON v.id = dv.variante_id
+                    WHERE v.producto_id = @id
+                ) THEN 1 ELSE 0 END", conn);
+            cmd.Parameters.AddWithValue("@id", productoId);
+
+            return (int)cmd.ExecuteScalar() == 1;
+        }
+
+        public void DesactivarProducto(int productoId)
+        {
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var cmd = new SqlCommand("UPDATE productos SET activo = 0 WHERE id = @id", conn);
+            cmd.Parameters.AddWithValue("@id", productoId);
+            cmd.ExecuteNonQuery();
+        }
+
+        public void ReactivarProducto(int productoId)
+        {
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var cmd = new SqlCommand("UPDATE productos SET activo = 1 WHERE id = @id", conn);
+            cmd.Parameters.AddWithValue("@id", productoId);
+            cmd.ExecuteNonQuery();
+        }
+
+        public (int id, string nombre, bool activo)? ObtenerPorCodigo(string codigo)
+        {
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var cmd = new SqlCommand(
+                "SELECT id, nombre, activo FROM productos WHERE codigo_interno = @cod", conn);
+            cmd.Parameters.AddWithValue("@cod", codigo);
+
+            using var r = cmd.ExecuteReader();
+            if (!r.Read()) return null;
+            return (r.GetInt32(0), r.GetString(1), r.GetBoolean(2));
+        }
+
+        public string GenerarSiguienteCodigo(string prefijo)
+        {
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var cmd = new SqlCommand(@"
+                SELECT ISNULL(MAX(
+                    TRY_CAST(SUBSTRING(codigo_interno, LEN(@pre) + 2, 20) AS INT)
+                ), 0)
+                FROM productos
+                WHERE codigo_interno LIKE @pre + '-%'", conn);
+            cmd.Parameters.AddWithValue("@pre", prefijo);
+
+            var ultimo = (int)cmd.ExecuteScalar();
+            return $"{prefijo}-{(ultimo + 1):D3}";
+        }
+
+        public bool VarianteTieneVentas(int varianteId)
+        {
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var cmd = new SqlCommand(@"
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1 FROM detalle_ventas WHERE variante_id = @id
+                ) THEN 1 ELSE 0 END", conn);
+            cmd.Parameters.AddWithValue("@id", varianteId);
+
+            return (int)cmd.ExecuteScalar() == 1;
+        }
+
+        public List<string> ObtenerVariantesCriticas()
+        {
+            var lista = new List<string>();
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+
+            var cmd = new SqlCommand(@"
+                SELECT p.nombre, v.medida, v.stock_actual
+                FROM variantes_producto v
+                INNER JOIN productos p ON p.id = v.producto_id
+                WHERE p.activo = 1 AND v.stock_actual < v.stock_minimo
+                ORDER BY v.stock_actual, p.nombre", conn);
+
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                var medida = r.IsDBNull(1) ? "" : $" · {r.GetString(1)}";
+                lista.Add($"{r.GetString(0)}{medida} ({r.GetInt32(2)})");
+            }
+            return lista;
+        }
+
+        public void EliminarProducto(int productoId)
+        {
+            using var conn = ConexionDB.ObtenerConexion();
+            conn.Open();
+            using var tx = conn.BeginTransaction();
+
+            try
+            {
+                var cmdVar = new SqlCommand("DELETE FROM variantes_producto WHERE producto_id = @id", conn, tx);
+                cmdVar.Parameters.AddWithValue("@id", productoId);
+                cmdVar.ExecuteNonQuery();
+
+                var cmdProd = new SqlCommand("DELETE FROM productos WHERE id = @id", conn, tx);
+                cmdProd.Parameters.AddWithValue("@id", productoId);
+                cmdProd.ExecuteNonQuery();
+
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
     }
 }

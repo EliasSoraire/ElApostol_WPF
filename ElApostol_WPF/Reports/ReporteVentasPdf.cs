@@ -21,6 +21,7 @@ namespace ElApostol_WPF.Reports
         public string MejorDia { get; set; } = "—";
 
         public List<FilaDiaDto> Filas { get; set; } = new();
+        public List<VentaDetalleDto> Ventas { get; set; } = new();
 
         public decimal TotalEfectivo { get; set; }
         public decimal TotalTarjeta { get; set; }
@@ -36,6 +37,15 @@ namespace ElApostol_WPF.Reports
         public decimal TicketPromedio { get; set; }
         public string Empleado { get; set; } = "—";
         public bool EsMejorDia { get; set; }
+    }
+
+    public class VentaDetalleDto
+    {
+        public string NumeroComprobante { get; set; } = "";
+        public DateTime FechaHora { get; set; }
+        public string Empleado { get; set; } = "—";
+        public string MetodoPago { get; set; } = "";
+        public decimal Total { get; set; }
     }
 
     public class ReporteVentasPdf : IDocument
@@ -158,6 +168,17 @@ namespace ElApostol_WPF.Reports
                           .FontSize(9).Bold().FontColor(TextGris).LetterSpacing(0.05f);
                 col.Item().Height(6);
                 col.Item().Element(ComposeMetodosPago);
+
+                if (_data.Ventas.Count > 0)
+                {
+                    col.Item().Height(16);
+
+                    col.Item().Text($"DETALLE DE VENTAS ({_data.Ventas.Count})")
+                              .FontSize(9).Bold().FontColor(TextGris).LetterSpacing(0.05f);
+                    col.Item().Height(6);
+
+                    col.Item().Element(ComposeDetalleVentas);
+                }
             });
         }
 
@@ -311,6 +332,51 @@ namespace ElApostol_WPF.Reports
                 col.Item().Text(pct).FontSize(8).FontColor("#AAAAAA");
             });
         }
+
+        private void ComposeDetalleVentas(IContainer c)
+        {
+            c.Table(table =>
+            {
+                table.ColumnsDefinition(cols =>
+                {
+                    cols.RelativeColumn(1.6f); // Comprobante
+                    cols.RelativeColumn(1.4f); // Fecha
+                    cols.RelativeColumn(1f);   // Hora
+                    cols.RelativeColumn(2.2f); // Empleado
+                    cols.RelativeColumn(1.6f); // Método
+                    cols.RelativeColumn(1.6f); // Total
+                });
+
+                var headers = new[] { "Comprobante", "Fecha", "Hora", "Empleado", "Método", "Total" };
+                TableHeader(table, headers);
+
+                bool alt = false;
+                foreach (var v in _data.Ventas.OrderByDescending(v => v.FechaHora))
+                {
+                    var bg = alt ? "#FAFAFA" : "#FFFFFF";
+                    alt = !alt;
+
+                    IContainer Cell(IContainer cell) =>
+                        cell.Background(bg).BorderBottom(0.5f).BorderColor("#F0F0F0")
+                            .PaddingVertical(5).PaddingHorizontal(8);
+
+                    table.Cell().Element(Cell).Text(v.NumeroComprobante).FontSize(8.5f);
+                    table.Cell().Element(Cell).Text(v.FechaHora.ToString("dd/MM/yyyy")).FontSize(8.5f).FontColor(TextGris);
+                    table.Cell().Element(Cell).Text(v.FechaHora.ToString("HH:mm")).FontSize(8.5f).FontColor(TextGris);
+                    table.Cell().Element(Cell).Text(v.Empleado).FontSize(8.5f);
+                    table.Cell().Element(Cell).Text(MetodoPagoDisplay(v.MetodoPago)).FontSize(8.5f).FontColor(TextGris);
+                    table.Cell().Element(Cell).Text(v.Total.ToString("C0", _ci)).Bold().FontColor(Verde).FontSize(8.5f);
+                }
+            });
+        }
+
+        private static string MetodoPagoDisplay(string metodo) => metodo switch
+        {
+            "efectivo" => "Efectivo",
+            "tarjeta" => "Tarjeta",
+            "transferencia" => "Transferencia",
+            _ => metodo
+        };
 
         private void ComposeFooter(IContainer c)
         {

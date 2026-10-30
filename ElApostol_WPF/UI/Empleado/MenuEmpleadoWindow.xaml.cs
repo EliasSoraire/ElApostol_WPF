@@ -25,7 +25,7 @@ namespace ElApostol_WPF.UI.Empleado
         public int StockMinimo { get; set; }
 
         public string PrecioDisplay => $"${PrecioUnitario:N0}";
-        public bool TieneStock => StockActual > StockMinimo;
+        public bool TieneStock => StockActual > 0;
         public string AccionLabel => TieneStock ? "Vender" : "Sin stock";
         public string StockEstado
         {
@@ -62,12 +62,54 @@ namespace ElApostol_WPF.UI.Empleado
             CargarPagina();
             CargarResumenTurno();
             IniciarReloj();
+
+            CtrlNuevaVenta.SalirSolicitado += CtrlNuevaVenta_SalirSolicitado;
         }
+
+        private void OcultarTodosLosPaneles()
+        {
+            PanelInventario.Visibility = Visibility.Collapsed;
+            CtrlNuevaVenta.Visibility = Visibility.Collapsed;
+            CtrlRegistroCaja.Visibility = Visibility.Collapsed;
+
+            var inactivo = (Style)FindResource("SbBtn");
+            BtnNavInventario.Style = inactivo;
+            BtnNavNuevaVenta.Style = inactivo;
+            BtnNavRegistroCaja.Style = inactivo;
+        }
+
+        private void MostrarInventario()
+        {
+            OcultarTodosLosPaneles();
+            PanelInventario.Visibility = Visibility.Visible;
+            BtnNavInventario.Style = (Style)FindResource("SbBtnActive");
+            CargarPagina();
+            CargarResumenTurno();
+        }
+
+        public void MostrarNuevaVenta(int? varianteId = null)
+        {
+            OcultarTodosLosPaneles();
+            CtrlNuevaVenta.Visibility = Visibility.Visible;
+            BtnNavNuevaVenta.Style = (Style)FindResource("SbBtnActive");
+            CtrlNuevaVenta.Inicializar(_usuario, varianteId);
+        }
+
+        private void MostrarRegistroCaja()
+        {
+            OcultarTodosLosPaneles();
+            CtrlRegistroCaja.Visibility = Visibility.Visible;
+            BtnNavRegistroCaja.Style = (Style)FindResource("SbBtnActive");
+            CtrlRegistroCaja.Inicializar(_usuario);
+        }
+
+        private void CtrlNuevaVenta_SalirSolicitado(object? sender, EventArgs e) =>
+            MostrarInventario();
 
 
         private void InicializarUI()
         {
-            var partes = _usuario.NombreCompleto.Split(' ');
+            var partes = _usuario.NombreCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var iniciales = partes.Length >= 2
                 ? $"{partes[0][0]}{partes[1][0]}".ToUpper()
                 : _usuario.NombreCompleto.Substring(0, Math.Min(2, _usuario.NombreCompleto.Length)).ToUpper();
@@ -141,6 +183,8 @@ namespace ElApostol_WPF.UI.Empleado
                     .ToList();
 
                 ListaInventario.ItemsSource = filas;
+                Dispatcher.BeginInvoke(new Action(AjustarColumnaMaterial),
+                    System.Windows.Threading.DispatcherPriority.ContextIdle);
 
                 int desde = _totalRegistros == 0 ? 0 : (_paginaActual - 1) * PageSize + 1;
                 int hasta = Math.Min(_paginaActual * PageSize, _totalRegistros);
@@ -186,10 +230,15 @@ namespace ElApostol_WPF.UI.Empleado
         {
             try
             {
-                var (_, criticos, _) = _productoRepo.ObtenerMetricas();
-                if (criticos > 0)
+                var criticos = _productoRepo.ObtenerVariantesCriticas();
+                if (criticos.Count > 0)
                 {
-                    TxtAlerta.Text = $"{criticos} producto{(criticos > 1 ? "s" : "")} con stock crítico — revisalos antes de ofrecer al cliente";
+                    const int maxMostrar = 3;
+                    var lista = string.Join(", ", criticos.Take(maxMostrar));
+                    var resto = criticos.Count > maxMostrar ? $" y {criticos.Count - maxMostrar} más" : "";
+
+                    TxtAlerta.Text = $"Stock crítico: {lista}{resto}";
+                    AlertaBanner.ToolTip = string.Join("\n", criticos);
                     AlertaBanner.Visibility = Visibility.Visible;
                 }
                 else
@@ -242,12 +291,37 @@ namespace ElApostol_WPF.UI.Empleado
 
 
         private void TxtBuscar_TextChanged(object sender, TextChangedEventArgs e)
-        { _paginaActual = 1; CargarPagina(); }
+        {
+            if (TxtBuscarPlaceholder != null)
+                TxtBuscarPlaceholder.Visibility = string.IsNullOrEmpty(TxtBuscar.Text)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            _paginaActual = 1;
+            CargarPagina();
+        }
 
         private void CmbCategoria_SelectionChanged(object sender, SelectionChangedEventArgs e)
         { _paginaActual = 1; CargarPagina(); }
 
         private void GridHeader_Click(object sender, RoutedEventArgs e) { }
+
+        private void ListaInventario_SizeChanged(object sender, SizeChangedEventArgs e) => AjustarColumnaMaterial();
+
+        private void AjustarColumnaMaterial()
+        {
+            if (ListaInventario.View is not System.Windows.Controls.GridView gridView) return;
+
+            double otrasColumnas = 0;
+            foreach (var col in gridView.Columns)
+            {
+                if (col != ColMaterial) otrasColumnas += col.ActualWidth > 0 ? col.ActualWidth : col.Width;
+            }
+
+            const double margen = 22;
+            double disponible = ListaInventario.ActualWidth - otrasColumnas - margen;
+            ColMaterial.Width = disponible > 100 ? disponible : 100;
+        }
 
         private void BtnVender_Click(object sender, RoutedEventArgs e)
         {
@@ -258,41 +332,20 @@ namespace ElApostol_WPF.UI.Empleado
         private void BtnNuevaVenta_Click(object sender, RoutedEventArgs e) =>
             AbrirNuevaVenta(null);
 
-        private void AbrirNuevaVenta(int? varianteId)
-        {
-            var win = new NuevaVentaWindow(_usuario, varianteId);
-            win.Owner = this;
-            if (win.ShowDialog() == true)
-            {
-                CargarPagina();
-                CargarResumenTurno();
-            }
-        }
+        private void AbrirNuevaVenta(int? varianteId) => MostrarNuevaVenta(varianteId);
 
         private void BtnNavInventario_Click(object sender, RoutedEventArgs e)
         {
             _paginaActual = 1;
             TxtBuscar.Clear();
             CmbCategoria.SelectedIndex = 0;
-            CargarPagina();
+            MostrarInventario();
         }
 
         private void BtnNavNuevaVenta_Click(object sender, RoutedEventArgs e) =>
             AbrirNuevaVenta(null);
 
-        private void BtnNavRegistroCaja_Click(object sender, RoutedEventArgs e)
-        {
-            var win = new RegistroCajaWindow(_usuario);
-            this.Hide();
-            win.Closed += (s, args) =>
-            {
-                this.Show();
-            };
-            if (win.ShowDialog() == true)
-            {
-                
-            }
-        }
+        private void BtnNavRegistroCaja_Click(object sender, RoutedEventArgs e) => MostrarRegistroCaja();
 
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
         {

@@ -1,30 +1,31 @@
-﻿using ElApostol_WPF.Business;
+using ElApostol_WPF.Business;
 using ElApostol_WPF.Data;
 using ElApostol_WPF.Models;
-using ElApostol_WPF.UI.Empleado;
-using ElApostol_WPF.UI.Login;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 
 namespace ElApostol_WPF.UI.Dueño
 {
-    public partial class GestionEmpleadosWindow : Window
+    public partial class GestionEmpleadosControl : UserControl
     {
-        private readonly Usuario _usuario;
+        private Usuario _usuario = null!;
         private readonly UsuarioRepository _repo = new();
         private readonly VentaRepository _ventaRepo = new();
 
         private List<Usuario> _empleados = new();
         private Usuario? _empleadoSeleccionado;
 
-        public GestionEmpleadosWindow(Usuario usuario)
+        public GestionEmpleadosControl()
         {
             InitializeComponent();
+        }
+
+        public void Inicializar(Usuario usuario)
+        {
             _usuario = usuario;
-            TxtNombreUsuario.Text = usuario.NombreCompleto;
-            TxtAvatar.Text = ObtenerIniciales(usuario.NombreCompleto);
+            _empleadoSeleccionado = null;
+            PanelDetalle.Visibility = Visibility.Collapsed;
             CargarEmpleados();
         }
 
@@ -84,7 +85,7 @@ namespace ElApostol_WPF.UI.Dueño
                 BorderThickness = new Thickness(0.5),
                 Padding = new Thickness(14, 12, 14, 12),
                 Margin = new Thickness(0, 0, 0, 8),
-                Cursor = Cursors.Hand,
+                Cursor = System.Windows.Input.Cursors.Hand,
                 Tag = emp
             };
 
@@ -123,7 +124,7 @@ namespace ElApostol_WPF.UI.Dueño
                 Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#666666")),
                 Margin = new Thickness(0, 2, 0, 0)
             });
-            
+
             var badgeBg = emp.Activo ? "#EAF3DE" : "#F5F5F5";
             var badgeFg = emp.Activo ? "#27500A" : "#AAAAAA";
             var badge = new Border
@@ -184,7 +185,7 @@ namespace ElApostol_WPF.UI.Dueño
         private void SeleccionarEmpleado(Usuario emp)
         {
             _empleadoSeleccionado = emp;
-            CargarEmpleados(); 
+            CargarEmpleados();
 
             MostrarPanelDetalle();
 
@@ -224,9 +225,8 @@ namespace ElApostol_WPF.UI.Dueño
             TxtNuevoNombre.Text = string.Empty;
             TxtNuevoUsuario.Text = string.Empty;
             TxtNuevoPass.Text = string.Empty;
-            CargarEmpleados(); 
+            CargarEmpleados();
         }
-
 
         private void BtnNuevoEmpleado_Click(object sender, RoutedEventArgs e) => MostrarPanelNuevo();
 
@@ -257,6 +257,14 @@ namespace ElApostol_WPF.UI.Dueño
 
             try
             {
+                if (_repo.ExisteNombreUsuario(usuario))
+                {
+                    MessageBox.Show($"Ya existe un usuario \"@{usuario}\". Elegí otro nombre de usuario.",
+                        "Usuario repetido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    TxtNuevoUsuario.Focus();
+                    return;
+                }
+
                 var hash = BCrypt.Net.BCrypt.HashPassword(pass);
 
                 _repo.CrearEmpleado(nombre, usuario, hash);
@@ -266,6 +274,11 @@ namespace ElApostol_WPF.UI.Dueño
 
                 MessageBox.Show($"Empleado \"{nombre}\" creado correctamente.",
                     "Empleado creado", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number is 2627 or 2601)
+            {
+                MessageBox.Show($"Ya existe un usuario \"@{usuario}\". Elegí otro nombre de usuario.",
+                    "Usuario repetido", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
@@ -290,7 +303,12 @@ namespace ElApostol_WPF.UI.Dueño
             try
             {
                 var auth = new AuthService();
-                auth.CambiarContrasena(_empleadoSeleccionado.Id, nuevaPass, esTemporal: true);
+                if (!auth.CambiarContrasena(_empleadoSeleccionado.Id, nuevaPass, esTemporal: true))
+                {
+                    MessageBox.Show("No se pudo resetear la contraseña. Verificá la conexión e intentá de nuevo.",
+                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
 
                 MessageBox.Show(
                     $"Contraseña de {_empleadoSeleccionado.NombreCompleto} reseteada.\n\nNueva contraseña temporal:\n{nuevaPass}\n\nComunicala al empleado.",
@@ -323,65 +341,8 @@ namespace ElApostol_WPF.UI.Dueño
             SeleccionarEmpleado(_empleadoSeleccionado);
         }
 
-
         private void TxtBusqueda_TextChanged(object sender, TextChangedEventArgs e) => CargarEmpleados();
         private void CmbFiltroEstado_SelectionChanged(object sender, SelectionChangedEventArgs e) => CargarEmpleados();
-
-
-        private void BtnInventario_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new MenuDuenoWindow(_usuario);
-            this.Hide();
-            ventana.Closed += (s, args) =>
-            {
-                this.Show();
-            };
-            if (ventana.ShowDialog() == true)
-            {
-            }
-        }
-
-        private void BtnAgregarMaterial_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new ElApostol_WPF.UI.Dueño.AgregarEditarProductoWindow();
-            ventana.Owner = this;
-
-            if (ventana.ShowDialog() == true)
-            {
-                
-            }
-        }
-
-        private void BtnNuevaVenta_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new ElApostol_WPF.UI.Shared.NuevaVentaWindow(_usuario);
-            ventana.Owner = this;
-            ventana.ShowDialog();
-        }
-
-        private void BtnReporteVentas_Click(object sender, RoutedEventArgs e)
-        {
-            var w = new ReporteVentasWindow(_usuario);
-            w.Show();
-            Close();
-        }
-
-        private void BtnGestionEmpleados_Click(object sender, RoutedEventArgs e) { }
-
-        private void BtnCambiarClaveEmpleado_Click(object sender, RoutedEventArgs e)
-        {
-            var ventana = new CambiarContrasenaEmpleadoWindow(_usuario);
-            ventana.Owner = this;
-            ventana.ShowDialog();
-        }
-
-        private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
-        {
-            var login = new LoginWindow();
-            login.Show();
-            Close();
-        }
-
 
         private static string ObtenerIniciales(string nombre)
         {
@@ -396,20 +357,6 @@ namespace ElApostol_WPF.UI.Dueño
             const string chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
             var rng = new Random();
             return new string(Enumerable.Range(0, 10).Select(_ => chars[rng.Next(chars.Length)]).ToArray());
-        }
-
-        private void Window_KeyDown(object sender, KeyEventArgs e)
-        {
-            switch (e.Key)
-            {
-                case Key.F1: BtnInventario_Click(null, null); break;
-                case Key.F2: BtnAgregarMaterial_Click(null, null); break;
-                case Key.F3: BtnNuevaVenta_Click(null, null); break;
-                case Key.F4: BtnReporteVentas_Click(null, null); break;
-                case Key.F5: BtnGestionEmpleados_Click(null, null); break;
-                case Key.F6: BtnCambiarClaveEmpleado_Click(null, null); break;
-                case Key.F12: BtnCerrarSesion_Click(null, null); break;
-            }
         }
     }
 }
