@@ -34,7 +34,7 @@ namespace ElApostol_WPF.UI.Dueño
         {
             if (PanelEmpleados == null) return;
 
-            var busqueda = TxtBusqueda.Text.Trim().ToLower();
+            var busqueda = TxtBusqueda.Text.Trim();
             var filtro = (CmbFiltroEstado.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Todos";
 
             _empleados = _repo.ObtenerEmpleados();
@@ -42,8 +42,8 @@ namespace ElApostol_WPF.UI.Dueño
             var filtrados = _empleados.Where(e =>
             {
                 var matchBusq = string.IsNullOrEmpty(busqueda)
-                    || e.NombreCompleto.ToLower().Contains(busqueda)
-                    || e.NombreUsuario.ToLower().Contains(busqueda);
+                    || ContieneSinAcentos(e.NombreCompleto, busqueda)
+                    || ContieneSinAcentos(e.NombreUsuario, busqueda);
 
                 var matchFiltro = filtro switch
                 {
@@ -57,6 +57,11 @@ namespace ElApostol_WPF.UI.Dueño
 
             RenderizarLista(filtrados);
         }
+
+        // Ignora mayúsculas y acentos: "perez" encuentra "Pérez"
+        private static bool ContieneSinAcentos(string texto, string busqueda) =>
+            System.Globalization.CultureInfo.InvariantCulture.CompareInfo.IndexOf(texto ?? "", busqueda,
+                System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreNonSpace) >= 0;
 
         private void RenderizarLista(List<Usuario> empleados)
         {

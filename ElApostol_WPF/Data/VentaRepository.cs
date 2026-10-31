@@ -24,7 +24,7 @@ namespace ElApostol_WPF.Data
                 LEFT JOIN categorias c ON c.id = p.categoria_id
                 LEFT JOIN variantes_producto v ON v.producto_id = p.id
                 WHERE p.activo = 1
-                  AND (p.nombre LIKE @q OR p.codigo_interno LIKE @q)
+                  AND (p.nombre COLLATE Latin1_General_CI_AI LIKE @q OR p.codigo_interno COLLATE Latin1_General_CI_AI LIKE @q)
                   AND v.stock_actual > 0
                 ORDER BY p.nombre, v.medida", conn);
 

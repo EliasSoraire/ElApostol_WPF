@@ -5,6 +5,8 @@ namespace ElApostol_WPF.Data
 {
     public class ProductoRepository
     {
+        private const string SinAcentos = "COLLATE Latin1_General_CI_AI";
+
         /// <summary>
         /// Inventario paginado con una fila por variante. Primero las variantes sin stock,
         /// después las que están bajo el mínimo y al final el resto (alfabético).
@@ -24,7 +26,8 @@ namespace ElApostol_WPF.Data
             if (soloConVariantes)
                 where += " AND v.id IS NOT NULL";
             if (!string.IsNullOrWhiteSpace(busqueda))
-                where += " AND (p.nombre LIKE @busqueda OR p.codigo_interno LIKE @busqueda OR c.nombre LIKE @busqueda OR p.marca LIKE @busqueda OR v.medida LIKE @busqueda)";
+                // CI_AI: la búsqueda ignora mayúsculas y acentos ("cano" encuentra "Caño")
+                where += $" AND (p.nombre {SinAcentos} LIKE @busqueda OR p.codigo_interno {SinAcentos} LIKE @busqueda OR c.nombre {SinAcentos} LIKE @busqueda OR p.marca {SinAcentos} LIKE @busqueda OR v.medida {SinAcentos} LIKE @busqueda)";
             if (categoriaId.HasValue)
                 where += " AND p.categoria_id = @catId";
 
