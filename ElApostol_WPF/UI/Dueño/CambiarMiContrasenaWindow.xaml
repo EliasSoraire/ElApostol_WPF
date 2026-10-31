@@ -19,12 +19,46 @@
         <Style x:Key="Campo" TargetType="PasswordBox">
             <Setter Property="Height" Value="36"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Padding" Value="10,0,32,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Background" Value="#F7F7F7"/>
             <Setter Property="BorderBrush" Value="#DDDDDD"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <!-- Mismo aspecto que el PasswordBox, para mostrar la contraseña en texto -->
+        <Style x:Key="CampoVisible" TargetType="TextBox">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="10,0,32,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#F7F7F7"/>
+            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+        </Style>
+        <Style x:Key="Ojo" TargetType="Button">
+            <Setter Property="Content" Value="●"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#AAAAAA"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="ToolTip" Value="Mostrar / ocultar contraseña"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -48,16 +82,27 @@
             <StackPanel Grid.Row="1" Margin="22,18,22,6">
 
                 <TextBlock Text="CONTRASEÑA ACTUAL" Style="{StaticResource Etiqueta}"/>
-                <PasswordBox x:Name="PbActual" Style="{StaticResource Campo}" PasswordChanged="Campo_Changed"/>
+                <Grid Margin="0,0,0,12">
+                    <PasswordBox x:Name="PbActual" Style="{StaticResource Campo}" PasswordChanged="Campo_Changed"/>
+                    <TextBox x:Name="TxtActual" Style="{StaticResource CampoVisible}" TextChanged="TxtVisible_Changed"/>
+                    <Button x:Name="BtnOjoActual" Style="{StaticResource Ojo}" Click="BtnOjo_Click"/>
+                </Grid>
 
                 <Border BorderBrush="#EEEEEE" BorderThickness="0,0.5,0,0" Margin="0,2,0,14"/>
 
                 <TextBlock Text="NUEVA CONTRASEÑA" Style="{StaticResource Etiqueta}"/>
-                <PasswordBox x:Name="PbNueva" Style="{StaticResource Campo}" PasswordChanged="Campo_Changed"/>
+                <Grid Margin="0,0,0,12">
+                    <PasswordBox x:Name="PbNueva" Style="{StaticResource Campo}" PasswordChanged="Campo_Changed"/>
+                    <TextBox x:Name="TxtNueva" Style="{StaticResource CampoVisible}" TextChanged="TxtVisible_Changed"/>
+                    <Button x:Name="BtnOjoNueva" Style="{StaticResource Ojo}" Click="BtnOjo_Click"/>
+                </Grid>
 
                 <TextBlock Text="REPETIR NUEVA CONTRASEÑA" Style="{StaticResource Etiqueta}"/>
-                <PasswordBox x:Name="PbConfirmar" Style="{StaticResource Campo}" Margin="0,0,0,4"
-                             PasswordChanged="Campo_Changed"/>
+                <Grid Margin="0,0,0,4">
+                    <PasswordBox x:Name="PbConfirmar" Style="{StaticResource Campo}" PasswordChanged="Campo_Changed"/>
+                    <TextBox x:Name="TxtConfirmar" Style="{StaticResource CampoVisible}" TextChanged="TxtVisible_Changed"/>
+                    <Button x:Name="BtnOjoConfirmar" Style="{StaticResource Ojo}" Click="BtnOjo_Click"/>
+                </Grid>
                 <TextBlock x:Name="TxtHintPass" FontSize="11.5" Foreground="#888888" Margin="0,0,0,12"
                            Text="Mínimo 6 caracteres. Dejala vacía si solo querés cambiar la pregunta."
                            TextWrapping="Wrap"/>

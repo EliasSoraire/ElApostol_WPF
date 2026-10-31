@@ -11,15 +11,19 @@ namespace ElApostol_WPF.UI.Empleado
         private readonly Usuario _usuario;
         private readonly AuthService _auth = new();
 
-        private bool _verActual = false;
         private bool _verNueva = false;
         private bool _verConfirmar = false;
 
+        /// <summary>
+        /// Se abre después de que el empleado entró con su contraseña temporal,
+        /// así que no se la vuelve a pedir: solo elige la nueva.
+        /// </summary>
         public CambiarContrasenaTempWindow(Usuario usuario)
         {
             InitializeComponent();
             _usuario = usuario;
             CargarInfoEmpleado();
+            Loaded += (_, _) => PbNueva.Focus();
         }
 
         private void CargarInfoEmpleado()
@@ -29,9 +33,6 @@ namespace ElApostol_WPF.UI.Empleado
             TxtMetaEmpleado.Text = "Empleado · Primer ingreso";
             ActualizarFuerza();
         }
-
-        private void BtnOjoActual_Click(object sender, RoutedEventArgs e)
-            => ToggleOjo(ref _verActual, PbActual, TxtActualVisible, BtnOjoActual);
 
         private void BtnOjoNueva_Click(object sender, RoutedEventArgs e)
         {
@@ -159,12 +160,10 @@ namespace ElApostol_WPF.UI.Empleado
 
         private void VerificarGuardar()
         {
-            var actual = _verActual ? TxtActualVisible.Text : PbActual.Password;
             var nueva = _verNueva ? TxtNuevaVisible.Text : PbNueva.Password;
             var confirm = _verConfirmar ? TxtConfirmarVisible.Text : PbConfirmar.Password;
 
             BtnGuardar.IsEnabled =
-                !string.IsNullOrEmpty(actual) &&
                 !string.IsNullOrEmpty(nueva) &&
                 nueva == confirm &&
                 NivelFuerza() >= 2;
@@ -172,18 +171,18 @@ namespace ElApostol_WPF.UI.Empleado
 
         private void BtnGuardar_Click(object sender, RoutedEventArgs e)
         {
-            var actual = _verActual ? TxtActualVisible.Text : PbActual.Password;
             var nueva = _verNueva ? TxtNuevaVisible.Text : PbNueva.Password;
-
-            if (!_auth.VerificarContrasenaActual(_usuario.Id, actual))
-            {
-                Dialogo.Show("La contraseña temporal ingresada es incorrecta.",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
 
             try
             {
+                // Si eligiera la misma temporal, la clave que conoce el dueño quedaría como definitiva
+                if (_auth.VerificarContrasenaActual(_usuario.Id, nueva))
+                {
+                    Dialogo.Show("La nueva contraseña tiene que ser distinta de la temporal.",
+                        "Contraseña repetida", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 var ok = _auth.CambiarContrasena(_usuario.Id, nueva, esTemporal: false);
                 if (!ok)
                 {

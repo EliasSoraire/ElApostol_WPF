@@ -4,6 +4,7 @@ using ElApostol_WPF.UI.Shared;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace ElApostol_WPF.UI.Dueño
 {
@@ -31,6 +32,47 @@ namespace ElApostol_WPF.UI.Dueño
         }
 
         private void Campo_Changed(object sender, RoutedEventArgs e) => OcultarError();
+
+        // ── Ojito: alterna entre el PasswordBox y un TextBox con la contraseña a la vista ──
+
+        private (PasswordBox pb, TextBox tb) ParDe(object boton) =>
+            boton == BtnOjoActual ? (PbActual, TxtActual)
+            : boton == BtnOjoNueva ? (PbNueva, TxtNueva)
+            : (PbConfirmar, TxtConfirmar);
+
+        private void BtnOjo_Click(object sender, RoutedEventArgs e)
+        {
+            var (pb, tb) = ParDe(sender);
+            var btn = (Button)sender;
+            var mostrar = tb.Visibility != Visibility.Visible;
+
+            if (mostrar)
+            {
+                tb.Text = pb.Password;
+                pb.Visibility = Visibility.Collapsed;
+                tb.Visibility = Visibility.Visible;
+                btn.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2E7D32"));
+                tb.Focus();
+                tb.CaretIndex = tb.Text.Length;
+            }
+            else
+            {
+                pb.Password = tb.Text;
+                tb.Visibility = Visibility.Collapsed;
+                pb.Visibility = Visibility.Visible;
+                btn.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#AAAAAA"));
+                pb.Focus();
+            }
+        }
+
+        // Mientras se ve en texto, el PasswordBox se mantiene igual: el guardado siempre lee .Password
+        private void TxtVisible_Changed(object sender, TextChangedEventArgs e)
+        {
+            var tb = (TextBox)sender;
+            if (tb.Visibility != Visibility.Visible) return;
+            var pb = tb == TxtActual ? PbActual : tb == TxtNueva ? PbNueva : PbConfirmar;
+            pb.Password = tb.Text;
+        }
         private void TxtRespuesta_Changed(object sender, TextChangedEventArgs e) => OcultarError();
         private void CmbPregunta_Changed(object sender, SelectionChangedEventArgs e) => OcultarError();
 
@@ -102,6 +144,7 @@ namespace ElApostol_WPF.UI.Dueño
                 if (!_auth.VerificarContrasenaActual(_usuario.Id, actual))
                 {
                     PbActual.Clear();
+                    TxtActual.Clear();
                     MostrarError("La contraseña actual no es correcta.", PbActual);
                     return;
                 }
@@ -143,6 +186,10 @@ namespace ElApostol_WPF.UI.Dueño
         {
             TxtError.Text = mensaje;
             PanelError.Visibility = Visibility.Visible;
+
+            // Si la contraseña está a la vista, el foco va al TextBox que la muestra
+            if (foco is PasswordBox { Visibility: not Visibility.Visible } pb)
+                foco = pb == PbActual ? TxtActual : pb == PbNueva ? TxtNueva : TxtConfirmar;
             foco?.Focus();
         }
 
