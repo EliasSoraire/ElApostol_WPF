@@ -24,6 +24,14 @@ namespace ElApostol_WPF.UI.Login
             InitializeComponent();
         }
 
+        /// <summary>Abre con el usuario ya cargado (viene del login tras una contraseña incorrecta).</summary>
+        public RecuperacionContrasenaWindow(string nombreUsuario) : this()
+        {
+            RTxtUsuario.Text = nombreUsuario;
+            RTxtUsuario.IsReadOnly = true;
+            Loaded += (_, _) => RTxtRespuesta.Focus();
+        }
+
         private void RPaso1_Changed(object sender, TextChangedEventArgs e)
         {
             var usuario = RTxtUsuario.Text.Trim();

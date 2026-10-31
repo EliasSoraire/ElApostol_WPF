@@ -22,6 +22,15 @@ namespace ElApostol_WPF.Business
             return _repo.ObtenerPorId(usuario.Id) ?? usuario;
         }
 
+        /// <summary>True si el usuario es un dueño activo con pregunta de seguridad configurada.</summary>
+        public bool PuedeRecuperarContrasena(string nombreUsuario)
+        {
+            var usuario = _repo.ObtenerPorNombreUsuario(nombreUsuario);
+            return usuario != null && usuario.Rol == "dueño" &&
+                   !string.IsNullOrEmpty(usuario.PreguntaSecreta) &&
+                   !string.IsNullOrEmpty(usuario.RespuestaSecretaHash);
+        }
+
         public bool CambiarContrasena(int usuarioId, string nuevaContrasena, bool esTemporal = false)
         {
             try

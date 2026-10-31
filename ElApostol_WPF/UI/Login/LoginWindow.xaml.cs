@@ -1,75 +1,44 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using ElApostol_WPF.Business;
 using ElApostol_WPF.Models;
 using ElApostol_WPF.UI.Dueño;
+using ElApostol_WPF.UI.Shared;
 
 namespace ElApostol_WPF.UI.Login
 {
     public partial class LoginWindow : Window
     {
         private readonly AuthService _auth = new();
-        private string _rolSeleccionado = "dueño";
         private bool _contrasenaVisible = false;
 
-        private static readonly SolidColorBrush _rojo =
-            new((Color)ColorConverter.ConvertFromString("#D32F2F"));
-        private static readonly SolidColorBrush _grisBorde =
-            new((Color)ColorConverter.ConvertFromString("#CCCCCC"));
+        // Usuario (dueño) para el que se ofrece la recuperación tras fallar la contraseña
+        private string? _usuarioRecuperable;
 
         public LoginWindow()
         {
             InitializeComponent();
+            TxtUsuario.KeyDown += (s, e) => { if (e.Key == Key.Enter) IntentarLogin(); };
             PbContrasena.KeyDown += (s, e) => { if (e.Key == Key.Enter) IntentarLogin(); };
             TxtContrasenaVisible.KeyDown += (s, e) => { if (e.Key == Key.Enter) IntentarLogin(); };
+            PbContrasena.PasswordChanged += (s, e) => LimpiarErrorCampo(PbContrasena);
+            TxtContrasenaVisible.TextChanged += (s, e) => LimpiarErrorCampo(TxtContrasenaVisible);
+            Loaded += (s, e) => TxtUsuario.Focus();
         }
 
-        private void BtnRolDueno_Click(object sender, MouseButtonEventArgs e)
-            => SeleccionarRol("dueño");
-
-        private void BtnRolEmpleado_Click(object sender, MouseButtonEventArgs e)
-            => SeleccionarRol("empleado");
-
-        private void SeleccionarRol(string rol)
+        private void TxtUsuario_TextChanged(object sender, TextChangedEventArgs e)
         {
-            _rolSeleccionado = rol;
+            LimpiarErrorCampo(TxtUsuario);
 
-            var verde = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2E7D32"));
-            var verdeLight = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#EAF3DE"));
-            var verdeTxt = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#27500A"));
-            var grisLight = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F5F5F5"));
-            var grisBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DDDDDD"));
-            var grisTxt = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#666666"));
-
-            if (rol == "dueño")
+            // Si cambia el usuario, la oferta de recuperación ya no aplica
+            if (_usuarioRecuperable != null &&
+                !string.Equals(TxtUsuario.Text.Trim(), _usuarioRecuperable, StringComparison.OrdinalIgnoreCase))
             {
-                BtnRolDueno.Background = verdeLight;
-                BtnRolDueno.BorderBrush = verde;
-                TxtRolDueno.Foreground = verdeTxt;
-
-                BtnRolEmpleado.Background = grisLight;
-                BtnRolEmpleado.BorderBrush = grisBorder;
-                TxtRolEmpleado.Foreground = grisTxt;
+                _usuarioRecuperable = null;
+                PanelRecuperar.Visibility = Visibility.Collapsed;
             }
-            else
-            {
-                BtnRolEmpleado.Background = verdeLight;
-                BtnRolEmpleado.BorderBrush = verde;
-                TxtRolEmpleado.Foreground = verdeTxt;
-                IconEmpleado.Background = verde;
-
-                BtnRolDueno.Background = grisLight;
-                BtnRolDueno.BorderBrush = grisBorder;
-                TxtRolDueno.Foreground = grisTxt;
-            }
-
-            LinkOlvide.IsEnabled = rol == "dueño";
-            LinkOlvide.Foreground = rol == "dueño"
-                ? grisTxt
-                : new SolidColorBrush(Colors.Transparent);
-
-            LimpiarErrores();
         }
 
         private void BtnOjo_Click(object sender, RoutedEventArgs e)
@@ -109,6 +78,7 @@ namespace ElApostol_WPF.UI.Login
             if (string.IsNullOrEmpty(nombreUsuario))
             {
                 MarcarError(TxtUsuario, "Ingresá tu usuario.");
+                TxtUsuario.Focus();
                 return;
             }
             if (string.IsNullOrEmpty(contrasena))
@@ -125,15 +95,17 @@ namespace ElApostol_WPF.UI.Login
                 {
                     MarcarError(TxtUsuario, null);
                     MarcarErrorPassword("Usuario o contraseña incorrectos.");
+
+                    // Al dueño se le ofrece recuperar la contraseña con su pregunta de seguridad
+                    if (_auth.PuedeRecuperarContrasena(nombreUsuario))
+                    {
+                        _usuarioRecuperable = nombreUsuario;
+                        PanelRecuperar.Visibility = Visibility.Visible;
+                    }
                     return;
                 }
 
-                if (resultado.Rol != _rolSeleccionado)
-                {
-                    MostrarError("El perfil seleccionado no coincide con el usuario.");
-                    return;
-                }
-
+                // El rol lo determina el sistema según el usuario
                 AbrirVentanaPorRol(resultado);
             }
             catch (Exception ex)
@@ -200,37 +172,61 @@ namespace ElApostol_WPF.UI.Login
 
         private void LimpiarErrores()
         {
-            TxtUsuario.BorderBrush = _grisBorde;
-            PbContrasena.BorderBrush = _grisBorde;
-            TxtContrasenaVisible.BorderBrush = _grisBorde;
-            TxtError.Visibility = Visibility.Collapsed;
+            TxtUsuario.Tag = null;
+            PbContrasena.Tag = null;
+            TxtContrasenaVisible.Tag = null;
+            PanelError.Visibility = Visibility.Collapsed;
             TxtError.Text = string.Empty;
         }
 
-        private void MarcarError(System.Windows.Controls.TextBox campo, string? mensaje)
+        private void LimpiarErrorCampo(Control campo)
         {
-            campo.BorderBrush = _rojo;
+            if (campo.Tag == null) return;
+            campo.Tag = null;
+            PanelError.Visibility = Visibility.Collapsed;
+        }
+
+        private void MarcarError(Control campo, string? mensaje)
+        {
+            campo.Tag = "error";
             if (mensaje != null) MostrarError(mensaje);
         }
 
         private void MarcarErrorPassword(string mensaje)
         {
-            PbContrasena.BorderBrush = _rojo;
-            TxtContrasenaVisible.BorderBrush = _rojo;
+            PbContrasena.Tag = "error";
+            TxtContrasenaVisible.Tag = "error";
             MostrarError(mensaje);
+
+            if (_contrasenaVisible) TxtContrasenaVisible.SelectAll();
+            else PbContrasena.SelectAll();
+            (_contrasenaVisible ? (Control)TxtContrasenaVisible : PbContrasena).Focus();
         }
 
         private void MostrarError(string mensaje)
         {
             TxtError.Text = mensaje;
-            TxtError.Visibility = Visibility.Visible;
+            PanelError.Visibility = Visibility.Visible;
         }
 
-        private void LinkOlvide_Click(object sender, RoutedEventArgs e)
+        private void BtnRecuperar_Click(object sender, RoutedEventArgs e)
         {
-            var ventana = new RecuperacionContrasenaWindow();
-            ventana.Owner = this;
-            ventana.ShowDialog();
+            if (_usuarioRecuperable == null) return;
+
+            var ventana = new RecuperacionContrasenaWindow(_usuarioRecuperable) { Owner = this };
+            if (ventana.ShowDialog() != true) return;
+
+            // Contraseña cambiada: limpiar y dejar listo para ingresar con la nueva
+            _usuarioRecuperable = null;
+            PanelRecuperar.Visibility = Visibility.Collapsed;
+            PbContrasena.Password = string.Empty;
+            TxtContrasenaVisible.Text = string.Empty;
+            LimpiarErrores();
+
+            Dialogo.Show("Tu contraseña se actualizó correctamente.\nIngresá con la nueva contraseña.",
+                "Contraseña actualizada", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            (_contrasenaVisible ? (Control)TxtContrasenaVisible : PbContrasena).Focus();
         }
     }
 }
