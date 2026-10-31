@@ -236,7 +236,7 @@
                     <StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="6" Height="6" Fill="#C0DD97" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="TURNO ACTIVO" Foreground="#80FFFFFF" FontSize="10"
+                            <TextBlock Text="TURNO ACTIVO" Foreground="#80FFFFFF" FontSize="11"
                                        VerticalAlignment="Center" FontWeight="Medium"/>
                         </StackPanel>
                         <TextBlock x:Name="TxtReloj"
@@ -265,7 +265,7 @@
 
                 <!-- Navegación -->
                 <StackPanel Margin="8,4">
-                    <TextBlock Text="ACCIONES" Foreground="#66FFFFFF" FontSize="10"
+                    <TextBlock Text="ACCIONES" Foreground="#66FFFFFF" FontSize="11"
                                FontWeight="Medium" Margin="8,8,8,4"/>
 
                     <!-- Inventario (activo) -->
@@ -284,7 +284,7 @@
                                 <TextBlock Text="Inventario" VerticalAlignment="Center" Foreground="White"/>
                             </StackPanel>
                             <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
-                                <TextBlock Text="F1" FontSize="10" Foreground="#80FFFFFF"/>
+                                <TextBlock Text="F1" FontSize="11" Foreground="#80FFFFFF"/>
                             </Border>
                         </Grid>
                     </Button>
@@ -306,12 +306,12 @@
                                 <TextBlock Text="Nueva venta" VerticalAlignment="Center"/>
                             </StackPanel>
                             <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
-                                <TextBlock Text="F2" FontSize="10" Foreground="#80FFFFFF"/>
+                                <TextBlock Text="F2" FontSize="11" Foreground="#80FFFFFF"/>
                             </Border>
                         </Grid>
                     </Button>
 
-                    <TextBlock Text="REPORTES" Foreground="#66FFFFFF" FontSize="10"
+                    <TextBlock Text="REPORTES" Foreground="#66FFFFFF" FontSize="11"
                                FontWeight="Medium" Margin="8,8,8,4"/>
 
                     <!-- Mi registro de caja -->
@@ -331,7 +331,7 @@
                                 <TextBlock Text="Mi registro de caja" VerticalAlignment="Center"/>
                             </StackPanel>
                             <Border Grid.Column="1" Background="#1FFFFFFF" CornerRadius="4" Padding="5,1">
-                                <TextBlock Text="F3" FontSize="10" Foreground="#80FFFFFF"/>
+                                <TextBlock Text="F3" FontSize="11" Foreground="#80FFFFFF"/>
                             </Border>
                         </Grid>
                     </Button>
@@ -567,7 +567,7 @@
                                                 <Border x:Name="StockBadge" CornerRadius="10"
                                                         Padding="8,2" HorizontalAlignment="Center">
                                                     <TextBlock x:Name="StockTxt"
-                                                               FontSize="11" FontWeight="Bold"/>
+                                                               FontSize="12" FontWeight="Bold"/>
                                                 </Border>
                                                 <DataTemplate.Triggers>
                                                     <DataTrigger Binding="{Binding StockEstado}" Value="ok">
@@ -609,7 +609,7 @@
                                 <Style TargetType="GridViewColumnHeader">
                                     <Setter Property="Background"  Value="#2E7D32"/>
                                     <Setter Property="Foreground"  Value="White"/>
-                                    <Setter Property="FontSize"    Value="11"/>
+                                    <Setter Property="FontSize"    Value="12"/>
                                     <Setter Property="FontWeight"  Value="Bold"/>
                                     <Setter Property="Padding"     Value="10,9"/>
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -619,7 +619,7 @@
                                             <ControlTemplate TargetType="GridViewColumnHeader">
                                                 <Border Background="#2E7D32" Padding="{TemplateBinding Padding}">
                                                     <TextBlock Text="{TemplateBinding Content}"
-                                                               Foreground="White" FontSize="11" FontWeight="Bold"
+                                                               Foreground="White" FontSize="12" FontWeight="Bold"
                                                                HorizontalAlignment="Center" TextAlignment="Center"/>
                                                 </Border>
                                             </ControlTemplate>

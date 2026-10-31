@@ -123,7 +123,7 @@
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden">
                     <StackPanel Margin="8,12,8,0">
 
-                        <TextBlock Text="GESTIÓN" FontSize="10"
+                        <TextBlock Text="GESTIÓN" FontSize="11"
                                    Foreground="#66FFFFFF"
                                    Margin="8,0,0,4"/>
 
@@ -142,7 +142,7 @@
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#1FFFFFFF"
                                         CornerRadius="4" Padding="5,1">
-                                    <TextBlock Text="F1" FontSize="10" Foreground="#80FFFFFF"/>
+                                    <TextBlock Text="F1" FontSize="11" Foreground="#80FFFFFF"/>
                                 </Border>
                             </Grid>
                         </Button>
@@ -161,18 +161,28 @@
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#1FFFFFFF"
                                         CornerRadius="4" Padding="5,1">
-                                    <TextBlock Text="F2" FontSize="10" Foreground="#80FFFFFF"/>
+                                    <TextBlock Text="F2" FontSize="11" Foreground="#80FFFFFF"/>
                                 </Border>
                             </Grid>
                         </Button>
 
                         <Button x:Name="BtnCategorias" Style="{StaticResource SbBtn}"
                                 Click="BtnCategorias_Click" Margin="0,2,0,0">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🏷" FontSize="12" Foreground="#CCFFFFff"
-                                           Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Categorías" VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="🏷" FontSize="12" Foreground="#CCFFFFff"
+                                               Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Categorías" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#1FFFFFFF"
+                                        CornerRadius="4" Padding="5,1">
+                                    <TextBlock Text="F7" FontSize="11" Foreground="#80FFFFFF"/>
+                                </Border>
+                            </Grid>
                         </Button>
 
                         <Button x:Name="BtnNuevaVenta" Style="{StaticResource SbBtn}"
@@ -189,12 +199,12 @@
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#1FFFFFFF"
                                         CornerRadius="4" Padding="5,1">
-                                    <TextBlock Text="F3" FontSize="10" Foreground="#80FFFFFF"/>
+                                    <TextBlock Text="F3" FontSize="11" Foreground="#80FFFFFF"/>
                                 </Border>
                             </Grid>
                         </Button>
 
-                        <TextBlock Text="REPORTES" FontSize="10"
+                        <TextBlock Text="REPORTES" FontSize="11"
                                    Foreground="#66FFFFFF"
                                    Margin="8,12,0,4"/>
 
@@ -212,12 +222,12 @@
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#1FFFFFFF"
                                         CornerRadius="4" Padding="5,1">
-                                    <TextBlock Text="F4" FontSize="10" Foreground="#80FFFFFF"/>
+                                    <TextBlock Text="F4" FontSize="11" Foreground="#80FFFFFF"/>
                                 </Border>
                             </Grid>
                         </Button>
 
-                        <TextBlock Text="CONFIGURACIÓN" FontSize="10"
+                        <TextBlock Text="CONFIGURACIÓN" FontSize="11"
                                    Foreground="#66FFFFFF"
                                    Margin="8,12,0,4"/>
 
@@ -235,13 +245,13 @@
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#1FFFFFFF"
                                         CornerRadius="4" Padding="5,1">
-                                    <TextBlock Text="F5" FontSize="10" Foreground="#80FFFFFF"/>
+                                    <TextBlock Text="F5" FontSize="11" Foreground="#80FFFFFF"/>
                                 </Border>
                             </Grid>
                         </Button>
 
-                        <Button x:Name="BtnCambiarClaveEmpleado" Style="{StaticResource SbBtn}"
-                                Click="BtnCambiarClaveEmpleado_Click" Margin="0,2,0,0">
+                        <Button x:Name="BtnCambiarMiClave" Style="{StaticResource SbBtn}"
+                                Click="BtnCambiarMiClave_Click" Margin="0,2,0,0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -250,13 +260,13 @@
                                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                                     <TextBlock Text="🔒" FontSize="12"
                                                Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Cambiar clave empleado"
+                                    <TextBlock Text="Mi contraseña"
                                                VerticalAlignment="Center"
                                                TextWrapping="Wrap" MaxWidth="110"/>
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#1FFFFFFF"
                                         CornerRadius="4" Padding="5,1">
-                                    <TextBlock Text="F6" FontSize="10" Foreground="#80FFFFFF"/>
+                                    <TextBlock Text="F6" FontSize="11" Foreground="#80FFFFFF"/>
                                 </Border>
                             </Grid>
                         </Button>
@@ -525,7 +535,7 @@
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="Background" Value="#2E7D32"/>
                                     <Setter Property="Foreground" Value="White"/>
-                                    <Setter Property="FontSize"   Value="13"/>
+                                    <Setter Property="FontSize"   Value="12"/>
                                     <Setter Property="FontWeight" Value="Bold"/>
                                     <Setter Property="Padding"    Value="12,0"/>
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -544,11 +554,11 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border CornerRadius="10" Padding="6,3"
-                                                    HorizontalAlignment="Left"
+                                                    HorizontalAlignment="Center"
                                                     VerticalAlignment="Center"
                                                     Background="{Binding StockBadgeBg}">
                                                 <TextBlock Text="{Binding StockDisplay}"
-                                                           FontSize="15" FontWeight="Bold"
+                                                           FontSize="12" FontWeight="Bold"
                                                            Foreground="{Binding StockBadgeFg}"/>
                                             </Border>
                                         </DataTemplate>

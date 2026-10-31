@@ -132,7 +132,7 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="12,10,12,6">
             <Border Background="White" CornerRadius="7"
                     BorderBrush="#E0E0E0" BorderThickness="0.5">
-                <StackPanel>
+                <StackPanel Grid.IsSharedSizeScope="True">
 
                     <!-- Cabecera negocio + meta -->
                     <Grid Margin="14,10,14,10">
@@ -177,17 +177,17 @@
                     <!-- Encabezado tabla ítems -->
                     <Grid Background="#E4F0D6">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="76"/>
-                            <ColumnDefinition Width="46"/>
-                            <ColumnDefinition Width="76"/>
-                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.3*"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Cant"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="PUnit"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Sub"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Material"  Style="{StaticResource ThHeader}" Margin="14,7,0,7"/>
-                        <TextBlock Grid.Column="1" Text="Medida"    Style="{StaticResource ThHeader}"/>
-                        <TextBlock Grid.Column="2" Text="Cant."     Style="{StaticResource ThHeader}"/>
-                        <TextBlock Grid.Column="3" Text="P. Unit."  Style="{StaticResource ThHeader}"/>
-                        <TextBlock Grid.Column="4" Text="Subtotal"  Style="{StaticResource ThHeader}" Margin="0,7,14,7"/>
+                        <TextBlock Grid.Column="1" Text="Medida"    Style="{StaticResource ThHeader}" Margin="8,7,0,7"/>
+                        <TextBlock Grid.Column="2" Text="Cant."     Style="{StaticResource ThHeader}" Margin="12,7,0,7" MinWidth="34" TextAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="P. Unit."  Style="{StaticResource ThHeader}" Margin="14,7,0,7" MinWidth="62" TextAlignment="Right"/>
+                        <TextBlock Grid.Column="4" Text="Subtotal"  Style="{StaticResource ThHeader}" Margin="14,7,14,7" MinWidth="66" TextAlignment="Right"/>
                     </Grid>
 
                     <!-- Filas de ítems -->
@@ -197,24 +197,24 @@
                                 <Border BorderBrush="#F0F0F0" BorderThickness="0,0,0,0.5">
                                     <Grid Margin="0,6,0,6">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="76"/>
-                                            <ColumnDefinition Width="46"/>
-                                            <ColumnDefinition Width="76"/>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="1.3*"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="Cant"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PUnit"/>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="Sub"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding NombreProducto}"
+                                        <TextBlock Grid.Column="0" Text="{Binding NombreProducto}" TextWrapping="Wrap"
                                                    FontSize="13" Foreground="#111111" Margin="14,0,0,0"
                                                    VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Medida}"
+                                        <TextBlock Grid.Column="1" Text="{Binding Medida}" TextWrapping="Wrap" Margin="8,0,0,0"
                                                    FontSize="13" Foreground="#555555" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Cantidad}"
-                                                   FontSize="13" Foreground="#555555" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="3" Text="{Binding PrecioDisplay}"
+                                        <TextBlock Grid.Column="2" Text="{Binding Cantidad}" Margin="12,0,0,0" TextAlignment="Center"
+                                                   FontSize="13" FontWeight="SemiBold" Foreground="#111111" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding PrecioDisplay}" Margin="14,0,0,0" TextAlignment="Right"
                                                    FontSize="13" Foreground="#555555" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="4" Text="{Binding SubtotalDisplay}"
                                                    FontSize="13" FontWeight="SemiBold" Foreground="#1B5E20"
-                                                   Margin="0,0,14,0" HorizontalAlignment="Right"
+                                                   Margin="14,0,14,0" TextAlignment="Right"
                                                    VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>

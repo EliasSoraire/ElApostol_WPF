@@ -1,4 +1,4 @@
-using ElApostol_WPF.UI.Shared;
+﻿using ElApostol_WPF.UI.Shared;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -275,7 +275,7 @@ namespace ElApostol_WPF.UI.Dueño
                 var txtVal = new TextBlock
                 {
                     Text = $"{(int)(fila.Total / 1000)}k",
-                    FontSize = 10,
+                    FontSize = 11,
                     Foreground = colorLabel,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Bottom,
@@ -300,7 +300,7 @@ namespace ElApostol_WPF.UI.Dueño
                 var lbl = new TextBlock
                 {
                     Text = diaCort,
-                    FontSize = 10,
+                    FontSize = 11,
                     Foreground = colorLabel,
                     HorizontalAlignment = HorizontalAlignment.Center
                 };

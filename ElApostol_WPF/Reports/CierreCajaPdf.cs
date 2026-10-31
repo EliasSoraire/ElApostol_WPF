@@ -1,4 +1,4 @@
-using ElApostol_WPF.Models;
+﻿using ElApostol_WPF.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -17,7 +17,7 @@ namespace ElApostol_WPF.Reports
         public List<VentaDetallada> Ventas { get; set; } = new();
     }
 
-    /// <summary>Cierre de caja de un empleado: totales por método de pago, ventas del período y firmas.</summary>
+    /// <summary>Cierre de caja de un empleado: totales por método de pago y ventas del período.</summary>
     public class CierreCajaPdf : IDocument
     {
         private const string Verde = "#2E7D32";
@@ -129,10 +129,9 @@ namespace ElApostol_WPF.Reports
                         cols.RelativeColumn(3);
                         cols.RelativeColumn(1.5f);
                         cols.RelativeColumn(2);
-                        cols.RelativeColumn(2.5f);
                     });
 
-                    Encabezado(table, "Método", "Operaciones", "Sistema", "Contado / verificado");
+                    Encabezado(table, "Método", "Operaciones", "Total");
 
                     foreach (var (metodo, label) in new[] { ("efectivo", "Efectivo"), ("transferencia", "Transferencia"), ("tarjeta", "Tarjeta (con recargo)") })
                     {
@@ -140,15 +139,12 @@ namespace ElApostol_WPF.Reports
                         table.Cell().Element(Celda).Text(label).Bold();
                         table.Cell().Element(Celda).Text(CantidadMetodo(metodo).ToString()).FontColor(TextGris);
                         table.Cell().Element(Celda).Text(Moneda(TotalMetodo(metodo))).Bold().FontColor(Verde);
-                        // Espacio para que el encargado anote lo contado
-                        table.Cell().Element(Celda).Text("$ ____________").FontColor("#BBBBBB");
                     }
 
                     IContainer Total(IContainer x) => x.Background(BgGris).BorderTop(1f).BorderColor(Verde).PaddingVertical(7).PaddingHorizontal(8);
                     table.Cell().Element(Total).Text("TOTAL").Bold().FontColor(VerdeOsc);
                     table.Cell().Element(Total).Text(_data.Ventas.Count.ToString()).Bold();
                     table.Cell().Element(Total).Text(Moneda(total)).Bold().FontColor(Verde).FontSize(10);
-                    table.Cell().Element(Total).Text("$ ____________").FontColor("#BBBBBB");
                 });
 
                 col.Item().Height(16);
@@ -199,16 +195,6 @@ namespace ElApostol_WPF.Reports
                         }
                     });
                 }
-
-                col.Item().Height(36);
-
-                // Firmas
-                col.Item().ShowEntire().Row(row =>
-                {
-                    Firma(row.RelativeItem(), "Firma del empleado", _data.Empleado);
-                    row.ConstantItem(40);
-                    Firma(row.RelativeItem(), "Recibe la caja", "Aclaración");
-                });
             });
         }
 
@@ -229,17 +215,6 @@ namespace ElApostol_WPF.Reports
                 foreach (var h in headers)
                     hdr.Cell().Background(Verde).PaddingVertical(6).PaddingHorizontal(8)
                        .Text(h).Bold().FontSize(9).FontColor("#FFFFFF");
-            });
-        }
-
-        private static void Firma(IContainer c, string titulo, string aclaracion)
-        {
-            c.Column(col =>
-            {
-                col.Item().Height(30);
-                col.Item().BorderTop(0.8f).BorderColor("#444444").PaddingTop(4)
-                   .AlignCenter().Text(titulo).FontSize(9).Bold();
-                col.Item().AlignCenter().Text(aclaracion).FontSize(8).FontColor(TextGris);
             });
         }
 

@@ -1,4 +1,4 @@
-using ElApostol_WPF.UI.Shared;
+﻿using ElApostol_WPF.UI.Shared;
 using ElApostol_WPF.Business;
 using ElApostol_WPF.Data;
 using ElApostol_WPF.Models;
@@ -304,33 +304,13 @@ namespace ElApostol_WPF.UI.Dueño
         {
             if (_empleadoSeleccionado == null) return;
 
-            var nuevaPass = GenerarContrasenaAleatoria();
-
-            try
+            // Ventana para escribir o generar la contraseña temporal del empleado elegido
+            var ventana = new CambiarContrasenaEmpleadoWindow(_empleadoSeleccionado)
             {
-                var auth = new AuthService();
-                if (!auth.CambiarContrasena(_empleadoSeleccionado.Id, nuevaPass, esTemporal: true))
-                {
-                    Dialogo.Show("No se pudo resetear la contraseña. Verificá la conexión e intentá de nuevo.",
-                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                Dialogo.Show(
-                    $"Contraseña de {_empleadoSeleccionado.NombreCompleto} reseteada.\n\nNueva contraseña temporal:\n{nuevaPass}\n\nComunicala al empleado.",
-                    "Contraseña reseteada",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                Dialogo.Show($"Error al resetear:\n{ex.Message}",
-                    "Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
+                Owner = Window.GetWindow(this)
+            };
+            ventana.ShowDialog();
         }
-
         private void BtnToggleActivo_Click(object sender, RoutedEventArgs e)
         {
             if (_empleadoSeleccionado == null) return;

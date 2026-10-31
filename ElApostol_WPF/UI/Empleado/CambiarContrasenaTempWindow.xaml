@@ -74,7 +74,7 @@
 
                     <!-- Contraseña temporal actual -->
                     <TextBlock Text="CONTRASEÑA TEMPORAL ACTUAL"
-                               FontSize="10" FontWeight="Medium"
+                               FontSize="11" FontWeight="Medium"
                                Foreground="#666666" Margin="0,0,0,5"/>
                     <Grid Margin="0,0,0,14">
                         <PasswordBox x:Name="PbActual"
@@ -101,7 +101,7 @@
 
                     <!-- Nueva contraseña -->
                     <TextBlock Text="NUEVA CONTRASEÑA"
-                               FontSize="10" FontWeight="Medium"
+                               FontSize="11" FontWeight="Medium"
                                Foreground="#666666" Margin="0,0,0,5"/>
                     <Grid Margin="0,0,0,6">
                         <PasswordBox x:Name="PbNueva"
@@ -149,7 +149,7 @@
 
                     <!-- Confirmar contraseña -->
                     <TextBlock Text="CONFIRMAR NUEVA CONTRASEÑA"
-                               FontSize="10" FontWeight="Medium"
+                               FontSize="11" FontWeight="Medium"
                                Foreground="#666666" Margin="0,0,0,5"/>
                     <Grid Margin="0,0,0,6">
                         <PasswordBox x:Name="PbConfirmar"

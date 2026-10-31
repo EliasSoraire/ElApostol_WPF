@@ -10,51 +10,23 @@ namespace ElApostol_WPF.UI.Dueño
 {
     public partial class CambiarContrasenaEmpleadoWindow : Window
     {
-        private readonly Usuario _usuarioDueno;
-        private readonly UsuarioRepository _repo = new();
+        private readonly Usuario _empleado;
 
-        private List<Usuario> _empleados = new();
         private bool _mostrandoPass1 = false;
         private bool _mostrandoPass2 = false;
         private bool _cargandoDesdeGen = false;
 
-        public CambiarContrasenaEmpleadoWindow(Usuario usuarioDueno)
+        /// <summary>Se abre desde Gestionar empleados con el empleado ya elegido.</summary>
+        public CambiarContrasenaEmpleadoWindow(Usuario empleado)
         {
             InitializeComponent();
-            _usuarioDueno = usuarioDueno;
-            CargarEmpleados();
+            _empleado = empleado;
+
+            TxtAvatar.Text = ObtenerIniciales(empleado.NombreCompleto);
+            TxtNombreEmpleado.Text = empleado.NombreCompleto;
+            TxtInfoEmpleado.Text = $"@{empleado.NombreUsuario} · Alta: {empleado.FechaAlta:dd/MM/yyyy}";
+            PanelInfoEmpleado.Visibility = Visibility.Visible;
         }
-
-        private void CargarEmpleados()
-        {
-            _empleados = _repo.ObtenerEmpleados();
-            CmbEmpleado.Items.Clear();
-            CmbEmpleado.Items.Add(new ComboBoxItem { Content = "Elegí un empleado...", Tag = null });
-            foreach (var e in _empleados)
-                CmbEmpleado.Items.Add(new ComboBoxItem { Content = e.NombreCompleto, Tag = e });
-            CmbEmpleado.SelectedIndex = 0;
-        }
-
-        private void CmbEmpleado_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var item = CmbEmpleado.SelectedItem as ComboBoxItem;
-            var emp = item?.Tag as Usuario;
-
-            if (emp != null)
-            {
-                TxtAvatar.Text = ObtenerIniciales(emp.NombreCompleto);
-                PanelInfoEmpleado.Visibility = Visibility.Visible;
-                TxtInfoEmpleado.Text = $"Empleado · Alta: {emp.FechaAlta:dd/MM/yyyy}";
-            }
-            else
-            {
-                TxtAvatar.Text = "—";
-                PanelInfoEmpleado.Visibility = Visibility.Collapsed;
-            }
-
-            VerificarGuardar();
-        }
-
         private void BtnGenerar_Click(object sender, RoutedEventArgs e)
         {
             var pass = GenerarContrasenaAleatoria();
@@ -146,6 +118,12 @@ namespace ElApostol_WPF.UI.Dueño
             {
                 TxtMatchHint.Visibility = Visibility.Collapsed;
             }
+            else if (p1 == p2 && p1.Length < 6)
+            {
+                TxtMatchHint.Visibility = Visibility.Visible;
+                TxtMatchHint.Text = "✖ Mínimo 6 caracteres";
+                TxtMatchHint.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#791F1F"));
+            }
             else if (p1 == p2)
             {
                 TxtMatchHint.Visibility = Visibility.Visible;
@@ -164,20 +142,15 @@ namespace ElApostol_WPF.UI.Dueño
 
         private void VerificarGuardar()
         {
-            var item = CmbEmpleado.SelectedItem as ComboBoxItem;
-            var emp = item?.Tag as Usuario;
             var p1 = _mostrandoPass1 ? TxtPass1Visible.Text : PbPass1.Password;
             var p2 = _mostrandoPass2 ? TxtPass2Visible.Text : PbPass2.Password;
 
-            BtnGuardar.IsEnabled = emp != null && !string.IsNullOrEmpty(p1) && p1 == p2;
+            BtnGuardar.IsEnabled = p1.Length >= 6 && p1 == p2;
         }
 
         private void BtnGuardar_Click(object sender, RoutedEventArgs e)
         {
-            var item = CmbEmpleado.SelectedItem as ComboBoxItem;
-            var emp = item?.Tag as Usuario;
-            if (emp == null) return;
-
+            var emp = _empleado;
             var pass = _mostrandoPass1 ? TxtPass1Visible.Text : PbPass1.Password;
 
             try

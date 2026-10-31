@@ -369,13 +369,11 @@ namespace ElApostol_WPF.UI.Dueño
 
         private void BtnGestionEmpleados_Click(object sender, RoutedEventArgs e) => MostrarGestionEmpleados();
 
-        private void BtnCambiarClaveEmpleado_Click(object sender, RoutedEventArgs e)
+        private void BtnCambiarMiClave_Click(object sender, RoutedEventArgs e)
         {
-            // Debe abrirse como diálogo: la ventana usa DialogResult al guardar/cancelar
-            var ventana = new CambiarContrasenaEmpleadoWindow(_usuario) { Owner = this };
+            var ventana = new CambiarMiContrasenaWindow(_usuario) { Owner = this };
             ventana.ShowDialog();
         }
-
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
         {
             var login = new LoginWindow();
@@ -392,7 +390,8 @@ namespace ElApostol_WPF.UI.Dueño
                 case Key.F3: BtnNuevaVenta_Click(null, null); break;
                 case Key.F4: BtnReporteVentas_Click(null, null); break;
                 case Key.F5: BtnGestionEmpleados_Click(null, null); break;
-                case Key.F6: BtnCambiarClaveEmpleado_Click(null, null); break;
+                case Key.F6: BtnCambiarMiClave_Click(null, null); break;
+                case Key.F7: BtnCategorias_Click(null, null); break;
                 case Key.F12: BtnCerrarSesion_Click(null, null); break;
             }
         }

@@ -97,7 +97,7 @@
                         Margin="20,18,20,20">
 
                 <TextBlock Text="USUARIO"
-                           FontSize="10" FontWeight="Medium"
+                           FontSize="11" FontWeight="Medium"
                            Foreground="#666666" Margin="0,0,0,5"/>
                 <TextBox x:Name="RTxtUsuario"
                          Height="34" FontSize="13" Padding="12,0"
@@ -115,7 +115,7 @@
                         Visibility="Collapsed">
                     <StackPanel>
                         <TextBlock Text="PREGUNTA SECRETA"
-                                   FontSize="10" FontWeight="Medium"
+                                   FontSize="11" FontWeight="Medium"
                                    Foreground="#27500A" Margin="0,0,0,5"/>
                         <TextBlock x:Name="RTxtPreguntaMostrada"
                                    FontSize="12" FontWeight="Medium"
@@ -124,7 +124,7 @@
                 </Border>
 
                 <TextBlock Text="TU RESPUESTA"
-                           FontSize="10" FontWeight="Medium"
+                           FontSize="11" FontWeight="Medium"
                            Foreground="#666666" Margin="0,0,0,5"/>
                 <TextBox x:Name="RTxtRespuesta"
                          Height="34" FontSize="13" Padding="12,0"
@@ -181,7 +181,7 @@
                         Visibility="Collapsed">
 
                 <TextBlock Text="NUEVA CONTRASEÑA"
-                           FontSize="10" FontWeight="Medium"
+                           FontSize="11" FontWeight="Medium"
                            Foreground="#666666" Margin="0,0,0,5"/>
                 <Grid Margin="0,0,0,14">
                     <PasswordBox x:Name="RPbNueva"
@@ -206,7 +206,7 @@
                 </Grid>
 
                 <TextBlock Text="CONFIRMAR CONTRASEÑA"
-                           FontSize="10" FontWeight="Medium"
+                           FontSize="11" FontWeight="Medium"
                            Foreground="#666666" Margin="0,0,0,5"/>
                 <Grid Margin="0,0,0,6">
                     <PasswordBox x:Name="RPbConfirmar"
